@@ -204,9 +204,9 @@ export default function DashboardPage() {
                 }
               };
 
-              const locationText = [event.location_venue, event.location_street, event.location_zip_city]
+              const locationText = ([event.location_venue, event.location_street, event.location_zip_city]
                 .filter(Boolean)
-                .join(', ') || event.location;
+                .join(', ') || event.location || '').trim();
 
               // Extract opponent name from title
               const getOpponentName = () => {
@@ -237,7 +237,7 @@ export default function DashboardPage() {
                 <div
                   key={event.id}
                   onClick={handleCardClick}
-                  className={`min-h-[136px] sm:min-h-[156px] p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
+                  className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
                     isToday 
                       ? 'bg-primary-900/20 border-primary-700 dark:bg-primary-900/30 dark:border-primary-600' 
                       : 'bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-600'
