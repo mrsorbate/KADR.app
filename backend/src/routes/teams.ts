@@ -579,7 +579,9 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       }
       
       // Determine if our team is home or away
-      const teamNameTrimmed = (team.name || '').trim().toLowerCase();
+      // Try to match with fussballde_team_name first (if set by user), then fall back to local team name
+      const comparisonName = team.fussballde_team_name || team.name;
+      const teamNameTrimmed = (comparisonName || '').trim().toLowerCase();
       const homeTeamTrimmed = (homeTeam || '').trim().toLowerCase();
       const awayTeamTrimmed = (awayTeam || '').trim().toLowerCase();
       
@@ -601,7 +603,7 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       }
       
       // Debug logging
-      console.log(`[Game Import] Team: "${team.name}" | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | isHome: ${isHomeMatch}`);
+      console.log(`[Game Import] Team: "${team.name}" (fussballde: "${team.fussballde_team_name || 'notset'}") | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | isHome: ${isHomeMatch}`);
 
       const gameIdRaw = pickFirstString(
         game?.id,

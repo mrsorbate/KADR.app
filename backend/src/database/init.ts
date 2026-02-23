@@ -356,6 +356,12 @@ try {
     console.log('✅ Added default_arrival_minutes_other column to teams table');
   }
 
+  const hasFussballdeTeamName = teamColumns.some((col) => col.name === 'fussballde_team_name');
+  if (!hasFussballdeTeamName) {
+    db.exec('ALTER TABLE teams ADD COLUMN fussballde_team_name TEXT');
+    console.log('✅ Added fussballde_team_name column to teams table');
+  }
+
   const trainerInviteColumns = db.pragma('table_info(trainer_invites)') as Array<{ name: string }>;
   const hasInvitedUserId = trainerInviteColumns.some((col) => col.name === 'invited_user_id');
   if (!hasInvitedUserId) {
