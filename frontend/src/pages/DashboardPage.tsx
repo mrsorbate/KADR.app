@@ -168,6 +168,19 @@ export default function DashboardPage() {
                 }
               };
 
+              const getStatusCircleClass = (status: string) => {
+                switch (status) {
+                  case 'accepted':
+                    return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
+                  case 'declined':
+                    return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+                  case 'tentative':
+                    return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300';
+                  default:
+                    return 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+                }
+              };
+
               const handleStatusClick = (status: string, e: React.MouseEvent) => {
                 e.stopPropagation();
                 updateResponseMutation.mutate({ eventId: event.id, status });
@@ -208,147 +221,110 @@ export default function DashboardPage() {
               };
 
               const opponent = getOpponentName();
+              const weekdayLabel = startDate.toLocaleDateString('de-DE', { weekday: 'short' });
+              const dateLabel = startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+              const timeLabel = startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+              const attendanceLabel = `${event.accepted_count} Zusagen`;
+              const matchTypeLabel = event?.type === 'match'
+                ? (event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel')
+                : getStatusLabel(event.my_status);
 
               return (
                 <div
                   key={event.id}
                   onClick={handleCardClick}
-                  className={`p-4 rounded-lg border-2 transition-all hover:shadow-md cursor-pointer ${
+                  className={`p-4 sm:p-5 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
                     isToday 
-                      ? 'bg-primary-50 border-primary-300 dark:bg-primary-900/25 dark:border-primary-700' 
-                      : 'bg-white border-gray-200 hover:border-primary-200 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-700'
+                      ? 'bg-primary-900/20 border-primary-700 dark:bg-primary-900/30 dark:border-primary-600' 
+                      : 'bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-600'
                   }`}
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-xl sm:text-2xl">{getTypeIcon(event.type)}</span>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-gray-900 dark:text-white">{opponent || event.title}</h3>
-                            {event?.type === 'match' && event?.is_home_match !== undefined && (
-                              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs sm:text-sm font-medium ${
-                                event.is_home_match
-                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                  : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
-                              }`}>
-                                <span>{event.is_home_match ? '🏠' : '🚗'}</span>
-                                <span>{event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}</span>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words">{event.team_name}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-1 text-xs sm:text-sm text-gray-600 dark:text-gray-300 ml-0 sm:ml-8">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4" />
-                          <span>
-                            {startDate.toLocaleDateString('de-DE', { 
-                              weekday: 'short', 
-                              day: '2-digit', 
-                              month: '2-digit',
-                              year: '2-digit'
-                            })} um {startDate.toLocaleTimeString('de-DE', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })} - {endDate.toLocaleTimeString('de-DE', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                          </span>
-                        </div>
-                        
-                        {locationText && (
-                          <div className="flex items-center space-x-2">
-                            <MapPin className="w-4 h-4" />
-                            <span>{locationText}</span>
-                          </div>
-                        )}
-                      </div>
+                  <div className="flex items-start gap-3 sm:gap-5">
+                    <div className="w-20 shrink-0 text-center">
+                      <p className="text-3xl sm:text-4xl font-light text-gray-100 dark:text-white leading-none">{weekdayLabel}</p>
+                      <p className="mt-2 text-xl sm:text-2xl font-medium text-gray-100 dark:text-gray-100">{dateLabel}</p>
+                      <p className="mt-2 text-4xl leading-none">{getTypeIcon(event.type)}</p>
                     </div>
 
-                    <div className="flex flex-col items-start sm:items-end gap-2 sm:ml-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center space-x-1">
-                          {getStatusIcon(event.my_status)}
-                          <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100">{getStatusLabel(event.my_status)}</span>
-                        </div>
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h3 className="text-xl sm:text-3xl font-semibold text-gray-100 dark:text-white truncate">{opponent || event.title}</h3>
 
-                        <div className="relative" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
-                            }}
-                            className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                            title="Antwortoptionen"
-                            aria-label="Antwortoptionen öffnen"
-                          >
-                            <MoreHorizontal className="w-5 h-5" />
-                          </button>
-
-                          {openQuickActionsEventId === event.id && (
-                            <div className="absolute right-0 top-11 sm:top-1/2 sm:-translate-y-1/2 sm:right-full sm:mr-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
-                              <button
-                                onClick={(e) => {
-                                  handleStatusClick('accepted', e);
-                                  setOpenQuickActionsEventId(null);
-                                }}
-                                disabled={updateResponseMutation.isPending}
-                                className={getActionButtonClass('accepted')}
-                                title="Zugesagt"
-                                aria-label="Zugesagt"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  handleStatusClick('tentative', e);
-                                  setOpenQuickActionsEventId(null);
-                                }}
-                                disabled={updateResponseMutation.isPending}
-                                className={getActionButtonClass('tentative')}
-                                title="Unsicher"
-                                aria-label="Unsicher"
-                              >
-                                <HelpCircle className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  handleStatusClick('declined', e);
-                                  setOpenQuickActionsEventId(null);
-                                }}
-                                disabled={updateResponseMutation.isPending}
-                                className={getActionButtonClass('declined')}
-                                title="Absagen"
-                                aria-label="Absagen"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                      <div className="mt-2 flex items-center gap-3 text-2xl sm:text-5xl text-gray-100 dark:text-gray-100">
+                        <span className="text-3xl sm:text-5xl font-medium tracking-tight">{timeLabel}</span>
+                        <span className="text-2xl sm:text-4xl font-light">{matchTypeLabel}</span>
                       </div>
-                      
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                        <span className="flex items-center">
-                          <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                          {event.accepted_count}
-                        </span>
-                        <span className="flex items-center">
-                          <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-                          {event.declined_count}
-                        </span>
-                        <span className="flex items-center">
-                          <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1"></span>
-                          {event.tentative_count}
-                        </span>
-                        <span className="flex items-center">
-                          <span className="w-2 h-2 bg-gray-400 rounded-full mr-1"></span>
-                          {event.pending_count}
-                        </span>
+
+                      <div className="mt-3 flex items-center gap-2 text-lg sm:text-2xl text-green-300 dark:text-green-300">
+                        <Check className="w-6 h-6 sm:w-7 sm:h-7" />
+                        <span className="font-medium">{attendanceLabel}</span>
+                      </div>
+
+                      {locationText && (
+                        <div className="mt-2 flex items-center gap-2 text-sm text-gray-300 dark:text-gray-300">
+                          <MapPin className="w-4 h-4" />
+                          <span className="truncate">{locationText}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="pt-1 flex flex-col items-end gap-3" onClick={(e) => e.stopPropagation()}>
+                      <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center ${getStatusCircleClass(event.my_status)}`}>
+                        {getStatusIcon(event.my_status)}
+                      </div>
+
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
+                          }}
+                          className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          title="Antwortoptionen"
+                          aria-label="Antwortoptionen öffnen"
+                        >
+                          <MoreHorizontal className="w-5 h-5" />
+                        </button>
+
+                        {openQuickActionsEventId === event.id && (
+                          <div className="absolute right-0 top-11 sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                handleStatusClick('accepted', e);
+                                setOpenQuickActionsEventId(null);
+                              }}
+                              disabled={updateResponseMutation.isPending}
+                              className={getActionButtonClass('accepted')}
+                              title="Zugesagt"
+                              aria-label="Zugesagt"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                handleStatusClick('tentative', e);
+                                setOpenQuickActionsEventId(null);
+                              }}
+                              disabled={updateResponseMutation.isPending}
+                              className={getActionButtonClass('tentative')}
+                              title="Unsicher"
+                              aria-label="Unsicher"
+                            >
+                              <HelpCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                handleStatusClick('declined', e);
+                                setOpenQuickActionsEventId(null);
+                              }}
+                              disabled={updateResponseMutation.isPending}
+                              className={getActionButtonClass('declined')}
+                              title="Absagen"
+                              aria-label="Absagen"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
