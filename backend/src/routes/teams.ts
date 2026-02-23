@@ -597,20 +597,12 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
 
       let homeTeam = pickFirstString(game?.homeTeam, game?.home_team, game?.home, game?.hometeam, game?.heim, game?.team_home);
       let awayTeam = pickFirstString(game?.awayTeam, game?.away_team, game?.away, game?.awayteam, game?.gast, game?.team_away);
-      
-      // Get title first
-      const title = pickFirstString(
-        game?.title,
-        game?.match_title,
-        homeTeam && awayTeam ? `${homeTeam} - ${awayTeam}` : '',
-        awayTeam ? `Spiel gegen ${awayTeam}` : '',
-        homeTeam ? `Spiel: ${homeTeam}` : '',
-        'Spiel',
-      );
+
+      const rawTitle = pickFirstString(game?.title, game?.match_title);
       
       // If homeTeam/awayTeam not found, try to extract from title (format: "Team A - Team B")
-      if (!homeTeam && !awayTeam && title && title.includes(' - ')) {
-        const parts = title.split(' - ');
+      if (!homeTeam && !awayTeam && rawTitle && rawTitle.includes(' - ')) {
+        const parts = rawTitle.split(' - ');
         homeTeam = parts[0]?.trim() || '';
         awayTeam = parts[1]?.trim() || '';
       }
@@ -627,6 +619,29 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       }
 
       const isHomeMatch = homeMatched && !awayMatched ? 1 : 0;
+
+      const isOwnTeamName = (value: unknown): boolean => {
+        return ownTeamCandidates.some((ownName) => namesMatch(ownName, value));
+      };
+
+      const opponentName = (() => {
+        if (homeMatched && !awayMatched) {
+          return awayTeam;
+        }
+        if (awayMatched && !homeMatched) {
+          return homeTeam;
+        }
+
+        const candidates = [homeTeam, awayTeam]
+          .map((value) => String(value || '').trim())
+          .filter(Boolean);
+        const nonOwn = candidates.find((value) => !isOwnTeamName(value));
+        return nonOwn || '';
+      })();
+
+      const title = opponentName
+        ? `Spiel gegen ${opponentName}`
+        : pickFirstString(rawTitle, 'Spiel');
 
       console.log(`[Game Import] Team: "${team.name}" (lookup: "${team.fussballde_team_name || team.name}") | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | homeMatched=${homeMatched} awayMatched=${awayMatched} | isHome: ${isHomeMatch}`);
 
