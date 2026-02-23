@@ -194,6 +194,21 @@ export default function DashboardPage() {
                 .filter(Boolean)
                 .join(', ') || event.location;
 
+              // Extract opponent name from title
+              const getOpponentName = () => {
+                if (!event.title) return '';
+                const parts = event.title.split(' - ');
+                if (parts.length === 2) {
+                  const trimmedTeamName = event.team_name.trim();
+                  const part1 = parts[0].trim();
+                  const part2 = parts[1].trim();
+                  return part1 === trimmedTeamName ? part2 : part1;
+                }
+                return event.title;
+              };
+
+              const opponent = getOpponentName();
+
               return (
                 <div
                   key={event.id}
@@ -208,8 +223,20 @@ export default function DashboardPage() {
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-xl sm:text-2xl">{getTypeIcon(event.type)}</span>
-                        <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">{event.title}</h3>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-gray-900 dark:text-white">{opponent || event.title}</h3>
+                            {event?.type === 'match' && event?.is_home_match !== undefined && (
+                              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs sm:text-sm font-medium ${
+                                event.is_home_match
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                  : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+                              }`}>
+                                <span>{event.is_home_match ? '🏠' : '🚗'}</span>
+                                <span>{event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}</span>
+                              </div>
+                            )}
+                          </div>
                           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words">{event.team_name}</p>
                         </div>
                       </div>
