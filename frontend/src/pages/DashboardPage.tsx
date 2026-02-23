@@ -224,7 +224,9 @@ export default function DashboardPage() {
               const opponent = getOpponentName();
               const displayTitle = String(opponent || event.title || '').replace(/^spiel\s+gegen\s+/i, '').trim();
               const weekdayLabel = startDate.toLocaleDateString('de-DE', { weekday: 'short' });
-              const dateLabel = startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+              const dayLabel = String(startDate.getDate()).padStart(2, '0');
+              const monthLabel = String(startDate.getMonth() + 1).padStart(2, '0');
+              const dateLabel = `${dayLabel}.${monthLabel}`;
               const timeLabel = startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
               const opponentCrestUrl = typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '';
               const matchTypeLabel = event?.type === 'match'
@@ -242,9 +244,11 @@ export default function DashboardPage() {
                   }`}
                 >
                   <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="w-20 sm:w-24 shrink-0 text-center flex flex-col justify-center">
-                      <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 leading-none">{weekdayLabel}</p>
-                      <p className="mt-1 text-3xl sm:text-4xl font-semibold text-gray-800 dark:text-gray-100 leading-none tracking-tight">{dateLabel}</p>
+                    <div className="w-20 sm:w-24 shrink-0">
+                      <div className="h-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-2 py-2 sm:py-3 flex flex-col items-center justify-center text-center">
+                        <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-300 leading-none">{weekdayLabel}</p>
+                        <p className="mt-1 text-3xl sm:text-4xl font-semibold tabular-nums text-gray-900 dark:text-gray-100 leading-none tracking-tight">{dateLabel}</p>
+                      </div>
                     </div>
 
                     <div className="flex-1 min-w-0">
