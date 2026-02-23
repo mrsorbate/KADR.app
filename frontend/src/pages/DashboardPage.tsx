@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
+  const [eventsView, setEventsView] = useState<'compact' | 'comfort'>('compact');
 
   // Admin wird zum Admin-Panel weitergeleitet
   if (user?.role === 'admin') {
@@ -128,10 +129,36 @@ export default function DashboardPage() {
 
       {/* Upcoming Events Section */}
       <div className="card">
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <Calendar className="w-6 h-6 mr-2 text-primary-600" />
-          Nächsten Termine
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold flex items-center">
+            <Calendar className="w-6 h-6 mr-2 text-primary-600" />
+            Nächsten Termine
+          </h2>
+          <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 p-1 bg-gray-50 dark:bg-gray-800">
+            <button
+              type="button"
+              onClick={() => setEventsView('compact')}
+              className={`px-2.5 py-1.5 text-xs sm:text-sm rounded-md transition-colors ${
+                eventsView === 'compact'
+                  ? 'bg-primary-600 text-white dark:bg-primary-500'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              Kompakt
+            </button>
+            <button
+              type="button"
+              onClick={() => setEventsView('comfort')}
+              className={`px-2.5 py-1.5 text-xs sm:text-sm rounded-md transition-colors ${
+                eventsView === 'comfort'
+                  ? 'bg-primary-600 text-white dark:bg-primary-500'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              Komfort
+            </button>
+          </div>
+        </div>
         
         {eventsLoading ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">Lädt...</div>
@@ -220,10 +247,10 @@ export default function DashboardPage() {
               };
 
               const opponent = getOpponentName();
+              const displayTitle = String(opponent || event.title || '').replace(/^spiel\s+gegen\s+/i, '').trim();
               const weekdayLabel = startDate.toLocaleDateString('de-DE', { weekday: 'short' });
               const dateLabel = startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
               const timeLabel = startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-              const attendanceLabel = `${event.accepted_count} Zusagen`;
               const matchTypeLabel = event?.type === 'match'
                 ? (event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel')
                 : getStatusLabel(event.my_status);
@@ -246,16 +273,26 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{opponent || event.title}</h3>
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{displayTitle || opponent || event.title}</h3>
 
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-700 dark:text-gray-200">
                         <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel}</span>
                         <span className="text-sm sm:text-base font-medium">{matchTypeLabel}</span>
                       </div>
 
-                      <div className="mt-1.5 flex items-center gap-1.5 text-sm sm:text-base text-green-700 dark:text-green-300">
-                        <Check className="w-4 h-4 sm:w-5 sm:h-5" />
-                        <span className="font-medium">{attendanceLabel}</span>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs sm:text-sm">
+                        <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-300 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          {event.accepted_count} Zusagen
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-yellow-700 dark:text-yellow-300 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-yellow-500" />
+                          {event.tentative_count} Unsicher
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-red-700 dark:text-red-300 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          {event.declined_count} Absagen
+                        </span>
                       </div>
 
                       {locationText && (
