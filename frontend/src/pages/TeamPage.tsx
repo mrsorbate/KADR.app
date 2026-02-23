@@ -45,13 +45,29 @@ export default function TeamPage() {
   const normalizeTeamName = (name: unknown): string => {
     return String(name ?? '')
       .toLowerCase()
-      .replace(/[^a-z0-9äöüß]/gi, '');
+      .replace(/ä/g, 'ae')
+      .replace(/ö/g, 'oe')
+      .replace(/ü/g, 'ue')
+      .replace(/ß/g, 'ss')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
   };
 
   const ownTeamName = normalizeTeamName(team?.name);
-  const isOwnTeamRow = (rowTeamName: unknown): boolean => {
+  const isOwnTeamRow = (row: any): boolean => {
     if (!ownTeamName) return false;
-    return normalizeTeamName(rowTeamName) === ownTeamName;
+
+    const candidates = [row?.team, row?.name, row?.teamName, row?.club, row?.clubName]
+      .map((value) => normalizeTeamName(value))
+      .filter(Boolean);
+
+    return candidates.some((candidate) => {
+      if (candidate === ownTeamName) return true;
+      if (candidate.length >= 6 && ownTeamName.includes(candidate)) return true;
+      if (ownTeamName.length >= 6 && candidate.includes(ownTeamName)) return true;
+      return false;
+    });
   };
 
   const formatGoalDifference = (goalValue: unknown): string => {
@@ -192,8 +208,8 @@ export default function TeamPage() {
                 <div
                   key={`${row.team}-mobile-${index}`}
                   className={`rounded-lg border p-3 ${
-                    isOwnTeamRow(row.team)
-                      ? 'border-primary-300 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/20'
+                    isOwnTeamRow(row)
+                      ? 'border-primary-500 dark:border-primary-400 bg-primary-100 dark:bg-primary-900/40 ring-1 ring-primary-300 dark:ring-primary-500'
                       : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
                   }`}
                 >
@@ -210,9 +226,18 @@ export default function TeamPage() {
                       ) : (
                         <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700" />
                       )}
-                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{row.team}</span>
+                      <span className={`text-sm truncate ${isOwnTeamRow(row) ? 'font-semibold text-primary-900 dark:text-primary-100' : 'font-medium text-gray-900 dark:text-white'}`}>
+                        {row.team}
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{row.points} Pkt</span>
+                    <div className="flex items-center gap-2">
+                      {isOwnTeamRow(row) && (
+                        <span className="inline-flex items-center rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white dark:bg-primary-500">
+                          Dein Team
+                        </span>
+                      )}
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{row.points} Pkt</span>
+                    </div>
                   </div>
                   <div className="mt-3 flex items-center text-xs text-gray-600 dark:text-gray-300">
                     <span>Sp: {row.games}</span>
@@ -244,8 +269,8 @@ export default function TeamPage() {
                   {externalTableRows.map((row: any, index: number) => (
                     <tr
                       key={`${row.team}-${index}`}
-                      className={isOwnTeamRow(row.team)
-                        ? 'bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30'
+                      className={isOwnTeamRow(row)
+                        ? 'bg-primary-100 dark:bg-primary-900/40 hover:bg-primary-200 dark:hover:bg-primary-900/50'
                         : 'hover:bg-gray-50 dark:hover:bg-gray-800'}
                     >
                       <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{row.place}</td>
@@ -261,7 +286,12 @@ export default function TeamPage() {
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700" />
                           )}
-                          <span>{row.team}</span>
+                          <span className={isOwnTeamRow(row) ? 'font-semibold text-primary-900 dark:text-primary-100' : ''}>{row.team}</span>
+                          {isOwnTeamRow(row) && (
+                            <span className="inline-flex items-center rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white dark:bg-primary-500">
+                              Dein Team
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{row.games}</td>
