@@ -152,15 +152,6 @@ export default function DashboardPage() {
                 }
               };
 
-              const getStatusLabel = (status: string) => {
-                switch (status) {
-                  case 'accepted': return 'Zugesagt';
-                  case 'declined': return 'Abgesagt';
-                  case 'tentative': return 'Unsicher';
-                  default: return 'Keine Antwort';
-                }
-              };
-
               const getTypeIcon = (type: string) => {
                 switch (type) {
                   case 'training': return '🏃';
