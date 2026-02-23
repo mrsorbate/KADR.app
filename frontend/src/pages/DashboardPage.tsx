@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, MapPin, Clock, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, MoreHorizontal, Check, X } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, MoreHorizontal, Check, X } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 
 export default function DashboardPage() {
@@ -139,7 +139,6 @@ export default function DashboardPage() {
           <div className="space-y-3">
             {upcomingEvents.map((event: any) => {
               const startDate = new Date(event.start_time);
-              const endDate = new Date(event.end_time);
               const isToday = startDate.toDateString() === new Date().toDateString();
               
               const getStatusIcon = (status: string) => {
