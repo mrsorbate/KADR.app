@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 
 export default function DashboardPage() {
@@ -271,12 +271,22 @@ export default function DashboardPage() {
 
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-700 dark:text-gray-200">
                         <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel} <span className="text-base sm:text-lg font-normal">Uhr</span></span>
-                        <span className="text-sm sm:text-base font-medium">{matchTypeLabel}</span>
                       </div>
 
                       {meetingTimeLabel && (
                         <div className="mt-0.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                           Treffpunkt: {meetingTimeLabel} Uhr
+                        </div>
+                      )}
+
+                      {matchTypeLabel && (
+                        <div className="mt-0.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                          {event.is_home_match ? (
+                            <Home className="w-3.5 h-3.5" />
+                          ) : (
+                            <Plane className="w-3.5 h-3.5" />
+                          )}
+                          <span>{matchTypeLabel}</span>
                         </div>
                       )}
 
