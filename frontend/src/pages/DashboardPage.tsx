@@ -229,6 +229,16 @@ export default function DashboardPage() {
               const dateLabel = `${dayLabel}.${monthLabel}`;
               const timeLabel = startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
               const opponentCrestUrl = typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '';
+              
+              // Calculate meeting time if arrival_minutes is set
+              const arrivalMinutes = typeof event?.arrival_minutes === 'number' ? event.arrival_minutes : 0;
+              let meetingTimeLabel = '';
+              if (arrivalMinutes > 0) {
+                const meetingDate = new Date(startDate);
+                meetingDate.setMinutes(meetingDate.getMinutes() - arrivalMinutes);
+                meetingTimeLabel = meetingDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+              }
+              
               const matchTypeLabel = event?.type === 'match'
                 ? (event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel')
                 : '';
@@ -269,9 +279,15 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-700 dark:text-gray-200">
-                        <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel}</span>
+                        <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel} <span className="text-base sm:text-lg font-normal">Uhr</span></span>
                         <span className="text-sm sm:text-base font-medium">{matchTypeLabel}</span>
                       </div>
+
+                      {meetingTimeLabel && (
+                        <div className="mt-0.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                          Treffpunkt: {meetingTimeLabel} Uhr
+                        </div>
+                      )}
 
                       <div className="mt-1.5 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm tabular-nums whitespace-nowrap">
                         <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-300 font-medium">
