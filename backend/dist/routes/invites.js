@@ -1,0 +1,469 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const crypto_1 = __importDefault(require("crypto"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const init_1 = __importDefault(require("../database/init"));
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const ensureTrainerInviteSchema = () => {
+    init_1.default.exec(`
+    CREATE TABLE IF NOT EXISTS trainer_invites (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      token TEXT UNIQUE NOT NULL,
+      invited_name TEXT NOT NULL,
+      invited_user_id INTEGER,
+      team_ids TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
+      expires_at DATETIME,
+      used_count INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (invited_user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_trainer_invites_token ON trainer_invites(token);
+  `);
+    const trainerInviteColumns = init_1.default.pragma('table_info(trainer_invites)');
+    const hasInvitedUserId = trainerInviteColumns.some((col) => col.name === 'invited_user_id');
+    if (!hasInvitedUserId) {
+        init_1.default.exec('ALTER TABLE trainer_invites ADD COLUMN invited_user_id INTEGER');
+    }
+};
+// Create team invite
+router.post('/teams/:teamId/invites', auth_1.authenticate, (req, res) => {
+    try {
+        const teamId = parseInt(req.params.teamId);
+        const { role, expiresInDays = 7, maxUses = 1, inviteeName } = req.body;
+        const normalizedInviteeName = String(inviteeName || '').trim();
+        if (!normalizedInviteeName) {
+            return res.status(400).json({ error: 'Invitee name is required' });
+        }
+        // Check if user is trainer of this team
+        const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
+        let inviteRole;
+        if (req.user.role === 'admin') {
+            inviteRole = 'trainer';
+            if (role && role !== 'trainer') {
+                return res.status(403).json({ error: 'Admins can only invite trainers' });
+            }
+        }
+        else if (membership?.role === 'trainer') {
+            inviteRole = 'player';
+            if (role && role !== 'player') {
+                return res.status(403).json({ error: 'Trainers can only invite players' });
+            }
+        }
+        else {
+            return res.status(403).json({ error: 'Only admins or team trainers can create invites' });
+        }
+        // Generate unique token
+        const token = crypto_1.default.randomBytes(16).toString('hex');
+        // Calculate expiry date
+        let expiresAt = null;
+        if (expiresInDays) {
+            const expiry = new Date();
+            expiry.setDate(expiry.getDate() + expiresInDays);
+            expiresAt = expiry.toISOString();
+        }
+        // Create invite
+        const stmt = init_1.default.prepare('INSERT INTO team_invites (team_id, token, role, created_by, expires_at, max_uses, player_name) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        const result = stmt.run(teamId, token, inviteRole, req.user.id, expiresAt, maxUses, normalizedInviteeName);
+        // Get team name for response
+        const team = init_1.default.prepare('SELECT name FROM teams WHERE id = ?').get(teamId);
+        res.status(201).json({
+            id: result.lastInsertRowid,
+            token,
+            team_id: teamId,
+            team_name: team.name,
+            role: inviteRole,
+            invitee_name: normalizedInviteeName,
+            expires_at: expiresAt,
+            max_uses: maxUses,
+            invite_url: `${process.env.FRONTEND_URL || 'http://localhost:5174'}/invite/${token}`
+        });
+    }
+    catch (error) {
+        console.error('Create invite error:', error);
+        res.status(500).json({ error: 'Failed to create invite' });
+    }
+});
+// Get team invites
+router.get('/teams/:teamId/invites', auth_1.authenticate, (req, res) => {
+    try {
+        const teamId = parseInt(req.params.teamId);
+        // Check if user is trainer of this team
+        const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(teamId, req.user.id);
+        if (req.user.role !== 'admin' && (!membership || membership.role !== 'trainer')) {
+            return res.status(403).json({ error: 'Only admins or trainers can view invites' });
+        }
+        const invites = init_1.default.prepare(`
+      SELECT 
+        ti.*,
+        u.name as created_by_name,
+        t.name as team_name
+      FROM team_invites ti
+      INNER JOIN users u ON ti.created_by = u.id
+      INNER JOIN teams t ON ti.team_id = t.id
+      WHERE ti.team_id = ?
+        AND (ti.expires_at IS NULL OR datetime(ti.expires_at) > datetime('now'))
+        AND COALESCE(ti.max_uses, 1) > COALESCE(ti.used_count, 0)
+      ORDER BY ti.created_at DESC
+    `).all(teamId);
+        res.json(invites);
+    }
+    catch (error) {
+        console.error('Get invites error:', error);
+        res.status(500).json({ error: 'Failed to fetch invites' });
+    }
+});
+// Get invite details by token (public)
+router.get('/invites/:token', (req, res) => {
+    try {
+        ensureTrainerInviteSchema();
+        const { token } = req.params;
+        const trainerInvite = init_1.default.prepare(`
+      SELECT 
+        ti.id,
+        ti.invited_name,
+        ti.team_ids,
+        ti.expires_at,
+        ti.used_count,
+        u.name as invited_by_name
+      FROM trainer_invites ti
+      INNER JOIN users u ON ti.created_by = u.id
+      WHERE ti.token = ?
+    `).get(token);
+        if (trainerInvite) {
+            if (trainerInvite.expires_at && new Date(trainerInvite.expires_at) < new Date()) {
+                return res.status(410).json({ error: 'Invite has expired' });
+            }
+            if ((trainerInvite.used_count || 0) >= 1) {
+                return res.status(410).json({ error: 'Invite has already been used' });
+            }
+            let teamIds = [];
+            try {
+                const parsed = JSON.parse(trainerInvite.team_ids || '[]');
+                if (Array.isArray(parsed)) {
+                    teamIds = parsed.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+                }
+            }
+            catch {
+                teamIds = [];
+            }
+            const teamNames = teamIds.length
+                ? init_1.default.prepare(`SELECT id, name FROM teams WHERE id IN (${teamIds.map(() => '?').join(', ')})`).all(...teamIds).map((t) => t.name)
+                : [];
+            return res.json({
+                id: trainerInvite.id,
+                invite_type: 'trainer_setup',
+                role: 'trainer',
+                player_name: trainerInvite.invited_name,
+                team_id: null,
+                team_name: teamNames.join(', '),
+                team_names: teamNames,
+                team_description: null,
+                invited_by_name: trainerInvite.invited_by_name,
+                expires_at: trainerInvite.expires_at,
+                max_uses: 1,
+                used_count: trainerInvite.used_count || 0,
+            });
+        }
+        const invite = init_1.default.prepare(`
+      SELECT 
+        ti.id,
+        ti.team_id,
+        ti.role,
+        ti.expires_at,
+        ti.max_uses,
+        ti.used_count,
+        ti.player_name,
+        ti.player_birth_date,
+        ti.player_jersey_number,
+        t.name as team_name,
+        t.description as team_description,
+        u.name as invited_by_name
+      FROM team_invites ti
+      INNER JOIN teams t ON ti.team_id = t.id
+      INNER JOIN users u ON ti.created_by = u.id
+      WHERE ti.token = ?
+    `).get(token);
+        if (!invite) {
+            return res.status(404).json({ error: 'Invite not found' });
+        }
+        // Check if expired
+        if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+            return res.status(410).json({ error: 'Invite has expired' });
+        }
+        const effectiveMaxUses = invite.max_uses ?? 1;
+        // Check if max uses reached
+        if (invite.used_count >= effectiveMaxUses) {
+            return res.status(410).json({ error: 'Invite has reached maximum uses' });
+        }
+        res.json(invite);
+    }
+    catch (error) {
+        console.error('Get invite error:', error);
+        res.status(500).json({ error: 'Failed to fetch invite' });
+    }
+});
+// Accept invite (for logged-in users)
+router.post('/invites/:token/accept', auth_1.authenticate, (req, res) => {
+    try {
+        const { token } = req.params;
+        const invite = init_1.default.prepare(`
+      SELECT id, team_id, role, expires_at, max_uses, used_count
+      FROM team_invites
+      WHERE token = ?
+    `).get(token);
+        if (!invite) {
+            return res.status(404).json({ error: 'Invite not found' });
+        }
+        // Check if expired
+        if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+            return res.status(410).json({ error: 'Invite has expired' });
+        }
+        const effectiveMaxUses = invite.max_uses ?? 1;
+        // Check if max uses reached
+        if (invite.used_count >= effectiveMaxUses) {
+            return res.status(410).json({ error: 'Invite has reached maximum uses' });
+        }
+        // Check if already a member
+        const existingMember = init_1.default.prepare('SELECT id FROM team_members WHERE team_id = ? AND user_id = ?').get(invite.team_id, req.user.id);
+        if (existingMember) {
+            return res.status(409).json({ error: 'You are already a member of this team' });
+        }
+        // Add user to team
+        const addMemberStmt = init_1.default.prepare('INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)');
+        addMemberStmt.run(invite.team_id, req.user.id, invite.role);
+        // Increment used count
+        init_1.default.prepare('UPDATE team_invites SET used_count = used_count + 1 WHERE id = ?').run(invite.id);
+        // Create pending responses for all upcoming events
+        const upcomingEvents = init_1.default.prepare("SELECT id FROM events WHERE team_id = ? AND start_time >= datetime('now')").all(invite.team_id);
+        const responseStmt = init_1.default.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
+        for (const event of upcomingEvents) {
+            responseStmt.run(event.id, req.user.id, 'pending');
+        }
+        res.json({
+            success: true,
+            message: 'Successfully joined the team',
+            team_id: invite.team_id
+        });
+    }
+    catch (error) {
+        console.error('Accept invite error:', error);
+        if (error.message.includes('UNIQUE constraint failed')) {
+            return res.status(409).json({ error: 'You are already a member of this team' });
+        }
+        res.status(500).json({ error: 'Failed to accept invite' });
+    }
+});
+// Delete invite
+router.delete('/invites/:id', auth_1.authenticate, (req, res) => {
+    try {
+        const inviteId = parseInt(req.params.id);
+        // Get invite to check permissions
+        const invite = init_1.default.prepare('SELECT team_id FROM team_invites WHERE id = ?').get(inviteId);
+        if (!invite) {
+            return res.status(404).json({ error: 'Invite not found' });
+        }
+        // Check if user is trainer of this team
+        const membership = init_1.default.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(invite.team_id, req.user.id);
+        if (req.user.role !== 'admin' && (!membership || membership.role !== 'trainer')) {
+            return res.status(403).json({ error: 'Only admins or trainers can delete invites' });
+        }
+        init_1.default.prepare('DELETE FROM team_invites WHERE id = ?').run(inviteId);
+        res.json({ success: true });
+    }
+    catch (error) {
+        console.error('Delete invite error:', error);
+        res.status(500).json({ error: 'Failed to delete invite' });
+    }
+});
+// Register with player invite (create account and accept invite in one step)
+router.post('/invites/:token/register', async (req, res) => {
+    try {
+        ensureTrainerInviteSchema();
+        const { token } = req.params;
+        const { username, email, password } = req.body;
+        if (!username || !email || !password) {
+            return res.status(400).json({ error: 'Username, email and password are required' });
+        }
+        const normalizedUsername = String(username).trim().toLowerCase();
+        if (!/^[a-z0-9_]{3,30}$/.test(normalizedUsername)) {
+            return res.status(400).json({ error: 'Username must be 3-30 chars and can only contain letters, numbers and underscores' });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+        const trainerInviteColumns = init_1.default.pragma('table_info(trainer_invites)');
+        const hasInvitedUserId = trainerInviteColumns.some((col) => col.name === 'invited_user_id');
+        const trainerInvite = init_1.default.prepare(`
+      SELECT id, invited_name, ${hasInvitedUserId ? 'invited_user_id' : 'NULL as invited_user_id'}, team_ids, expires_at, used_count
+      FROM trainer_invites
+      WHERE token = ?
+    `).get(token);
+        if (trainerInvite) {
+            if (trainerInvite.expires_at && new Date(trainerInvite.expires_at) < new Date()) {
+                return res.status(410).json({ error: 'Invite has expired' });
+            }
+            if ((trainerInvite.used_count || 0) >= 1) {
+                return res.status(410).json({ error: 'Invite has already been used' });
+            }
+            const existingUsername = init_1.default.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(normalizedUsername);
+            if (existingUsername) {
+                if (!trainerInvite.invited_user_id || existingUsername.id !== trainerInvite.invited_user_id) {
+                    return res.status(409).json({ error: 'Username already exists' });
+                }
+            }
+            const normalizedEmail = String(email).trim().toLowerCase();
+            const existingUser = init_1.default.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(normalizedEmail);
+            if (existingUser) {
+                if (!trainerInvite.invited_user_id || existingUser.id !== trainerInvite.invited_user_id) {
+                    return res.status(409).json({ error: 'User with this email already exists' });
+                }
+            }
+            let teamIds = [];
+            try {
+                const parsed = JSON.parse(trainerInvite.team_ids || '[]');
+                if (Array.isArray(parsed)) {
+                    teamIds = parsed.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+                }
+            }
+            catch {
+                teamIds = [];
+            }
+            if (teamIds.length === 0) {
+                return res.status(400).json({ error: 'This trainer invite has no teams assigned' });
+            }
+            const existingTeams = init_1.default.prepare(`SELECT id FROM teams WHERE id IN (${teamIds.map(() => '?').join(', ')})`).all(...teamIds);
+            const validTeamIds = existingTeams.map((team) => team.id);
+            if (validTeamIds.length === 0) {
+                return res.status(400).json({ error: 'Assigned teams no longer exist' });
+            }
+            const hashedPassword = await bcryptjs_1.default.hash(password, 10);
+            let trainerUserId = Number(trainerInvite.invited_user_id || 0);
+            const userColumns = init_1.default.pragma('table_info(users)');
+            const hasIsRegistered = userColumns.some((col) => col.name === 'is_registered');
+            const transaction = init_1.default.transaction(() => {
+                if (trainerUserId > 0) {
+                    const existingTrainer = init_1.default.prepare('SELECT id FROM users WHERE id = ? AND role = ?').get(trainerUserId, 'trainer');
+                    if (!existingTrainer) {
+                        throw new Error('Linked trainer account not found');
+                    }
+                    if (hasIsRegistered) {
+                        init_1.default.prepare('UPDATE users SET username = ?, email = ?, password = ?, is_registered = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(normalizedUsername, normalizedEmail, hashedPassword, trainerUserId);
+                    }
+                    else {
+                        init_1.default.prepare('UPDATE users SET username = ?, email = ?, password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(normalizedUsername, normalizedEmail, hashedPassword, trainerUserId);
+                    }
+                }
+                else {
+                    const userStmt = hasIsRegistered
+                        ? init_1.default.prepare('INSERT INTO users (username, email, password, name, role, is_registered) VALUES (?, ?, ?, ?, ?, 1)')
+                        : init_1.default.prepare('INSERT INTO users (username, email, password, name, role) VALUES (?, ?, ?, ?, ?)');
+                    const userResult = userStmt.run(normalizedUsername, normalizedEmail, hashedPassword, trainerInvite.invited_name, 'trainer');
+                    trainerUserId = Number(userResult.lastInsertRowid);
+                    const addMemberStmt = init_1.default.prepare('INSERT INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)');
+                    const responseStmt = init_1.default.prepare('INSERT OR IGNORE INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
+                    for (const teamId of validTeamIds) {
+                        addMemberStmt.run(teamId, trainerUserId, 'trainer');
+                        const upcomingEvents = init_1.default.prepare("SELECT id FROM events WHERE team_id = ? AND start_time >= datetime('now')").all(teamId);
+                        for (const event of upcomingEvents) {
+                            responseStmt.run(event.id, trainerUserId, 'pending');
+                        }
+                    }
+                    if (hasInvitedUserId) {
+                        init_1.default.prepare('UPDATE trainer_invites SET invited_user_id = ? WHERE id = ?').run(trainerUserId, trainerInvite.id);
+                    }
+                }
+                init_1.default.prepare('UPDATE trainer_invites SET used_count = used_count + 1 WHERE id = ?').run(trainerInvite.id);
+            });
+            transaction();
+            const authToken = jsonwebtoken_1.default.sign({ id: trainerUserId, username: normalizedUsername, email: normalizedEmail, role: 'trainer' }, JWT_SECRET, { expiresIn: '7d' });
+            return res.status(201).json({
+                token: authToken,
+                user: {
+                    id: trainerUserId,
+                    username: normalizedUsername,
+                    email: normalizedEmail,
+                    name: trainerInvite.invited_name,
+                    role: 'trainer'
+                },
+                team_id: validTeamIds[0]
+            });
+        }
+        const invite = init_1.default.prepare(`
+      SELECT id, team_id, role, expires_at, max_uses, used_count, player_name, player_birth_date, player_jersey_number
+      FROM team_invites
+      WHERE token = ?
+    `).get(token);
+        if (!invite) {
+            return res.status(404).json({ error: 'Invite not found' });
+        }
+        // Check if expired
+        if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+            return res.status(410).json({ error: 'Invite has expired' });
+        }
+        const effectiveMaxUses = invite.max_uses ?? 1;
+        // Check if max uses reached
+        if (invite.used_count >= effectiveMaxUses) {
+            return res.status(410).json({ error: 'Invite has reached maximum uses' });
+        }
+        // Check if player_name exists (indicates this is a player invite, not generic invite)
+        if (!invite.player_name) {
+            return res.status(400).json({ error: 'This invite is not for player registration. Please login and accept the invite.' });
+        }
+        // Check if user with this username or email already exists
+        const existingUsername = init_1.default.prepare('SELECT id FROM users WHERE LOWER(username) = ?').get(normalizedUsername);
+        if (existingUsername) {
+            return res.status(409).json({ error: 'Username already exists' });
+        }
+        const existingUser = init_1.default.prepare('SELECT id FROM users WHERE LOWER(email) = LOWER(?)').get(email);
+        if (existingUser) {
+            return res.status(409).json({ error: 'User with this email already exists' });
+        }
+        // Hash password
+        const hashedPassword = await bcryptjs_1.default.hash(password, 10);
+        // Create user with data from invite
+        const userStmt = init_1.default.prepare('INSERT INTO users (username, email, password, name, role, birth_date) VALUES (?, ?, ?, ?, ?, ?)');
+        const userResult = userStmt.run(normalizedUsername, email, hashedPassword, invite.player_name, invite.role, invite.player_birth_date);
+        // Add user to team
+        const memberStmt = init_1.default.prepare('INSERT INTO team_members (team_id, user_id, role, jersey_number) VALUES (?, ?, ?, ?)');
+        memberStmt.run(invite.team_id, userResult.lastInsertRowid, invite.role, invite.player_jersey_number);
+        // Increment used count
+        init_1.default.prepare('UPDATE team_invites SET used_count = used_count + 1 WHERE id = ?').run(invite.id);
+        // Create pending responses for all upcoming events
+        const upcomingEvents = init_1.default.prepare("SELECT id FROM events WHERE team_id = ? AND start_time >= datetime('now')").all(invite.team_id);
+        const responseStmt = init_1.default.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
+        for (const event of upcomingEvents) {
+            responseStmt.run(event.id, userResult.lastInsertRowid, 'pending');
+        }
+        // Generate token
+        const authToken = jsonwebtoken_1.default.sign({ id: userResult.lastInsertRowid, username: normalizedUsername, email, role: invite.role }, JWT_SECRET, { expiresIn: '7d' });
+        res.status(201).json({
+            token: authToken,
+            user: {
+                id: userResult.lastInsertRowid,
+                username: normalizedUsername,
+                email,
+                name: invite.player_name,
+                role: invite.role,
+                birth_date: invite.player_birth_date
+            }
+        });
+    }
+    catch (error) {
+        console.error('Register with invite error:', error);
+        if (error.message.includes('UNIQUE constraint failed')) {
+            return res.status(409).json({ error: 'Username or email already in use' });
+        }
+        res.status(500).json({ error: 'Failed to register' });
+    }
+});
+exports.default = router;
+//# sourceMappingURL=invites.js.map

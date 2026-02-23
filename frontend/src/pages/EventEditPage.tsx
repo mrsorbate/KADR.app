@@ -1,0 +1,495 @@
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+import { eventsAPI, teamsAPI } from '../lib/api';
+import { useAuthStore } from '../store/authStore';
+
+export default function EventEditPage() {
+  const { id } = useParams<{ id: string }>();
+  const eventId = id ? parseInt(id, 10) : NaN;
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const isTrainer = user?.role === 'trainer';
+
+  const [eventData, setEventData] = useState({
+    title: '',
+    type: 'training' as 'training' | 'match' | 'other',
+    description: '',
+    location_venue: '',
+    location_street: '',
+    location_zip_city: '',
+    pitch_type: '',
+    meeting_point: '',
+    arrival_minutes: '',
+    start_time: '',
+    duration_minutes: '',
+    end_time: '',
+    rsvp_deadline: '',
+    visibility_all: true,
+  });
+
+  const stepDurationMinutes = (delta: number) => {
+    setEventData((prev) => {
+      const current = parseInt(prev.duration_minutes, 10);
+      const baseValue = Number.isFinite(current) ? current : 1;
+      const nextValue = Math.max(1, baseValue + delta);
+      return { ...prev, duration_minutes: String(nextValue) };
+    });
+  };
+
+  const stepArrivalMinutes = (delta: number) => {
+    setEventData((prev) => {
+      const current = parseInt(prev.arrival_minutes, 10);
+      const baseValue = Number.isFinite(current) ? current : 0;
+      const nextValue = Math.max(0, baseValue + delta);
+      return { ...prev, arrival_minutes: String(nextValue) };
+    });
+  };
+
+  const handleMinutesWheel = (
+    event: React.WheelEvent<HTMLInputElement>,
+    field: 'duration_minutes' | 'arrival_minutes'
+  ) => {
+    event.preventDefault();
+    const delta = event.deltaY < 0 ? 5 : -5;
+    if (field === 'duration_minutes') {
+      stepDurationMinutes(delta);
+      return;
+    }
+    stepArrivalMinutes(delta);
+  };
+
+  const categoryOptions: Array<{ value: 'training' | 'match' | 'other'; label: string }> = [
+    { value: 'training', label: 'Training' },
+    { value: 'match', label: 'Spiel' },
+    { value: 'other', label: 'Sonstiges' },
+  ];
+
+  const pitchTypeOptions: Array<{ value: string; label: string }> = [
+    { value: 'Rasen', label: 'Rasen' },
+    { value: 'Kunstrasen', label: 'Kunstrasen' },
+    { value: 'Halle', label: 'Halle' },
+    { value: 'Sonstiges', label: 'Sonstiges' },
+  ];
+
+  const toLocalInputValue = (value?: string | null): string => {
+    if (!value) {
+      return '';
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    const pad = (num: number) => String(num).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const getCategoryDefaultArrivalMinutes = (
+    settings: any,
+    type: 'training' | 'match' | 'other'
+  ): number | null => {
+    const parseMinutes = (value: unknown): number | null => {
+      if (value === null || value === undefined || String(value).trim() === '') {
+        return null;
+      }
+      const parsed = parseInt(String(value), 10);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 240) {
+        return null;
+      }
+      return parsed;
+    };
+
+    const typeValue =
+      type === 'training'
+        ? settings?.default_arrival_minutes_training
+        : type === 'match'
+          ? settings?.default_arrival_minutes_match
+          : settings?.default_arrival_minutes_other;
+
+    const fromType = parseMinutes(typeValue);
+    if (fromType !== null) {
+      return fromType;
+    }
+
+    return parseMinutes(settings?.default_arrival_minutes);
+  };
+
+  const { data: event, isLoading } = useQuery({
+    queryKey: ['event', eventId],
+    queryFn: async () => {
+      const response = await eventsAPI.getById(eventId);
+      return response.data;
+    },
+    enabled: Number.isFinite(eventId),
+  });
+
+  const { data: teamSettings } = useQuery({
+    queryKey: ['team-settings', event?.team_id],
+    queryFn: async () => {
+      const response = await teamsAPI.getSettings(event!.team_id);
+      return response.data;
+    },
+    enabled: Boolean(event?.team_id),
+  });
+
+  useEffect(() => {
+    if (!event) {
+      return;
+    }
+
+    const parsedDuration = event.duration_minutes && Number.isFinite(Number(event.duration_minutes))
+      ? String(event.duration_minutes)
+      : (() => {
+          const start = new Date(event.start_time);
+          const end = new Date(event.end_time);
+          if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+            return '';
+          }
+          return String(Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000)));
+        })();
+
+    setEventData({
+      title: event.title || '',
+      type: (event.type || 'training') as 'training' | 'match' | 'other',
+      description: event.description || '',
+      location_venue: event.location_venue || event.location || '',
+      location_street: event.location_street || '',
+      location_zip_city: event.location_zip_city || '',
+      pitch_type: event.pitch_type || '',
+      meeting_point: event.meeting_point || '',
+      arrival_minutes: event.arrival_minutes === null || event.arrival_minutes === undefined ? '' : String(event.arrival_minutes),
+      start_time: toLocalInputValue(event.start_time),
+      duration_minutes: parsedDuration,
+      end_time: toLocalInputValue(event.end_time),
+      rsvp_deadline: toLocalInputValue(event.rsvp_deadline),
+      visibility_all: event.visibility_all === 1 || event.visibility_all === true,
+    });
+  }, [event]);
+
+  useEffect(() => {
+    if (!eventData.start_time || !eventData.duration_minutes) {
+      return;
+    }
+
+    const startDate = new Date(eventData.start_time);
+    const minutes = parseInt(eventData.duration_minutes, 10);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(minutes)) {
+      return;
+    }
+
+    const endDate = new Date(startDate.getTime() + minutes * 60000);
+    const pad = (num: number) => String(num).padStart(2, '0');
+    const formatted = `${endDate.getFullYear()}-${pad(endDate.getMonth() + 1)}-${pad(endDate.getDate())}T${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`;
+    if (eventData.end_time !== formatted) {
+      setEventData((prev) => ({ ...prev, end_time: formatted }));
+    }
+  }, [eventData.start_time, eventData.duration_minutes, eventData.end_time]);
+
+  const updateEventMutation = useMutation({
+    mutationFn: (data: any) => eventsAPI.update(eventId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      navigate(`/events/${eventId}`);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const dataToSend = {
+      title: eventData.title,
+      type: eventData.type,
+      description: eventData.description || undefined,
+      location: eventData.location_venue || undefined,
+      location_venue: eventData.location_venue || undefined,
+      location_street: eventData.location_street || undefined,
+      location_zip_city: eventData.location_zip_city || undefined,
+      pitch_type: eventData.pitch_type || undefined,
+      meeting_point: eventData.meeting_point || undefined,
+      arrival_minutes: eventData.arrival_minutes === '' ? undefined : parseInt(eventData.arrival_minutes, 10),
+      start_time: new Date(eventData.start_time).toISOString(),
+      end_time: new Date(eventData.end_time).toISOString(),
+      rsvp_deadline: eventData.rsvp_deadline ? new Date(eventData.rsvp_deadline).toISOString() : undefined,
+      duration_minutes: eventData.duration_minutes === '' ? undefined : parseInt(eventData.duration_minutes, 10),
+      visibility_all: eventData.visibility_all,
+    };
+
+    updateEventMutation.mutate(dataToSend);
+  };
+
+  if (!isTrainer) {
+    return <Navigate to="/events" replace />;
+  }
+
+  if (isLoading) {
+    return <div className="text-center py-12 text-gray-600 dark:text-gray-300">Lädt...</div>;
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-3">
+        <Link to={`/events/${eventId}`} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+          <ArrowLeft className="w-6 h-6" />
+        </Link>
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Termin bearbeiten</h1>
+      </div>
+
+      <div className="card">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Kategorie *</label>
+              <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-label="Kategorie auswählen">
+                {categoryOptions.map((option) => {
+                  const isActive = eventData.type === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setEventData({ ...eventData, type: option.value })}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Platzart</label>
+              <div className="mt-1 flex flex-wrap gap-2" role="group" aria-label="Platzart auswählen">
+                <button
+                  type="button"
+                  onClick={() => setEventData({ ...eventData, pitch_type: '' })}
+                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                    eventData.pitch_type === ''
+                      ? 'bg-primary-600 text-white border-primary-600'
+                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  Keine
+                </button>
+                {pitchTypeOptions.map((option) => {
+                  const isActive = eventData.pitch_type === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setEventData({ ...eventData, pitch_type: option.value })}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Titel *</label>
+              <input
+                type="text"
+                required
+                value={eventData.title}
+                onChange={(e) => setEventData({ ...eventData, title: e.target.value })}
+                title="Titel"
+                className="input mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beginn *</label>
+              <input
+                type="datetime-local"
+                required
+                value={eventData.start_time}
+                onChange={(e) => setEventData({ ...eventData, start_time: e.target.value })}
+                title="Beginn"
+                className="input mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dauer (Minuten) *</label>
+              <div className="mt-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => stepDurationMinutes(-5)}
+                  className="btn btn-secondary px-3"
+                  aria-label="Dauer verringern"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  step={5}
+                  required
+                  value={eventData.duration_minutes}
+                  onChange={(e) => setEventData({ ...eventData, duration_minutes: e.target.value })}
+                  onWheel={(e) => handleMinutesWheel(e, 'duration_minutes')}
+                  title="Dauer in Minuten"
+                  className="input text-center"
+                />
+                <button
+                  type="button"
+                  onClick={() => stepDurationMinutes(5)}
+                  className="btn btn-secondary px-3"
+                  aria-label="Dauer erhöhen"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstaette</label>
+              <input
+                type="text"
+                value={eventData.location_venue}
+                onChange={(e) => setEventData({ ...eventData, location_venue: e.target.value })}
+                title="Ort oder Spielstaette"
+                className="input mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Strasse</label>
+              <input
+                type="text"
+                value={eventData.location_street}
+                onChange={(e) => setEventData({ ...eventData, location_street: e.target.value })}
+                title="Strasse"
+                className="input mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">PLZ Ort</label>
+              <input
+                type="text"
+                value={eventData.location_zip_city}
+                onChange={(e) => setEventData({ ...eventData, location_zip_city: e.target.value })}
+                title="PLZ Ort"
+                className="input mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Treffpunkt</label>
+              <input
+                type="text"
+                value={eventData.meeting_point}
+                onChange={(e) => setEventData({ ...eventData, meeting_point: e.target.value })}
+                title="Treffpunkt"
+                className="input mt-1"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Treffen vor Beginn (Minuten)</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const categoryDefaultArrival = getCategoryDefaultArrivalMinutes(teamSettings, eventData.type);
+                    setEventData((prev) => ({
+                      ...prev,
+                      arrival_minutes: categoryDefaultArrival === null ? '' : String(categoryDefaultArrival),
+                    }));
+                  }}
+                  className="text-xs text-primary-600 hover:text-primary-500"
+                >
+                  Minuten auf Team-Default
+                </button>
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => stepArrivalMinutes(-5)}
+                  className="btn btn-secondary px-3"
+                  aria-label="Ankunftsminuten verringern"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={0}
+                  step={5}
+                  value={eventData.arrival_minutes}
+                  onChange={(e) => setEventData({ ...eventData, arrival_minutes: e.target.value })}
+                  onWheel={(e) => handleMinutesWheel(e, 'arrival_minutes')}
+                  title="Treffen vor Beginn in Minuten"
+                  className="input text-center"
+                />
+                <button
+                  type="button"
+                  onClick={() => stepArrivalMinutes(5)}
+                  className="btn btn-secondary px-3"
+                  aria-label="Ankunftsminuten erhöhen"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rueckmeldefrist</label>
+              <input
+                type="datetime-local"
+                value={eventData.rsvp_deadline}
+                onChange={(e) => setEventData({ ...eventData, rsvp_deadline: e.target.value })}
+                title="Rueckmeldefrist"
+                className="input mt-1"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beschreibung</label>
+              <textarea
+                value={eventData.description}
+                onChange={(e) => setEventData({ ...eventData, description: e.target.value })}
+                title="Beschreibung"
+                className="input mt-1 min-h-[90px]"
+              />
+            </div>
+
+            <div className="md:col-span-2 flex items-center gap-2">
+              <input
+                id="visibility_all"
+                type="checkbox"
+                checked={eventData.visibility_all}
+                onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
+              />
+              <label htmlFor="visibility_all" className="text-sm text-gray-700 dark:text-gray-300">
+                Teilnehmerliste fuer alle sichtbar
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Link to={`/events/${eventId}`} className="btn btn-secondary">
+              Abbrechen
+            </Link>
+            <button type="submit" className="btn btn-primary" disabled={updateEventMutation.isPending}>
+              {updateEventMutation.isPending ? 'Speichern...' : 'Speichern'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,33 @@
+services:
+  sqadx-backend:
+    container_name: sqadx-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      PORT: ${BACKEND_PORT:-3000}
+      NODE_ENV: ${NODE_ENV:-production}
+      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_PATH: ${DATABASE_PATH:-/app/data/database.sqlite}
+      FRONTEND_URL: ${FRONTEND_URL}
+      TZ: ${TZ:-Europe/Berlin}
+      FUSSBALL_API_BASE_URL: ${FUSSBALL_API_BASE_URL:-https://api-fussball.de/api}
+    volumes:
+      - ${BACKEND_DATA_DIR:-./.data}:/app/data
+      - ${BACKEND_UPLOADS_DIR:-./.uploads}:/app/uploads
+    networks:
+      default:
+        aliases:
+          - backend
+    restart: unless-stopped
+
+  sqadx-frontend:
+    container_name: sqadx-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - sqadx-backend
+    ports:
+      - '${FRONTEND_PORT:-18080}:80'
+    restart: unless-stopped

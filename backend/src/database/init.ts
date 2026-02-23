@@ -1,0 +1,380 @@
+import Database from 'better-sqlite3';
+import path from 'path';
+import type { Database as DatabaseType } from 'better-sqlite3';
+
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../../database.sqlite');
+const db: DatabaseType = new Database(dbPath);
+
+// Enable foreign keys
+db.pragma('foreign_keys = ON');
+
+// Create tables
+db.exec(`
+  -- Organization settings table
+  CREATE TABLE IF NOT EXISTS organizations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL DEFAULT 'Dein Verein',
+    logo TEXT,
+    timezone TEXT DEFAULT 'Europe/Berlin',
+    setup_completed INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Users table
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('admin', 'trainer', 'player')),
+    is_registered INTEGER NOT NULL DEFAULT 1,
+    profile_picture TEXT,
+    birth_date DATE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  -- Teams table
+  CREATE TABLE IF NOT EXISTS teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    fussballde_id TEXT,
+    default_response TEXT DEFAULT 'pending',
+    default_rsvp_deadline_hours INTEGER,
+    default_rsvp_deadline_hours_training INTEGER,
+    default_rsvp_deadline_hours_match INTEGER,
+    default_rsvp_deadline_hours_other INTEGER,
+    default_arrival_minutes INTEGER,
+    default_arrival_minutes_training INTEGER,
+    default_arrival_minutes_match INTEGER,
+    default_arrival_minutes_other INTEGER,
+    created_by INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
+  -- Team members table
+  CREATE TABLE IF NOT EXISTS team_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('trainer', 'player', 'staff')),
+    jersey_number INTEGER,
+    position TEXT,
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(team_id, user_id)
+  );
+
+  -- Events table (trainings and matches)
+  CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    type TEXT NOT NULL CHECK(type IN ('training', 'match', 'other')),
+    description TEXT,
+    location TEXT,
+    location_venue TEXT,
+    location_street TEXT,
+    location_zip_city TEXT,
+    pitch_type TEXT,
+    meeting_point TEXT,
+    arrival_minutes INTEGER,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
+    rsvp_deadline DATETIME,
+    duration_minutes INTEGER,
+    visibility_all INTEGER DEFAULT 1,
+    invite_all INTEGER DEFAULT 1,
+    created_by INTEGER NOT NULL,
+    series_id TEXT,
+    external_game_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
+  -- Event responses table (Zu-/Absagen)
+  CREATE TABLE IF NOT EXISTS event_responses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('accepted', 'declined', 'tentative', 'pending')),
+    comment TEXT,
+    responded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(event_id, user_id)
+  );
+
+  -- Team invitations table
+  CREATE TABLE IF NOT EXISTS team_invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    role TEXT NOT NULL DEFAULT 'player' CHECK(role IN ('trainer', 'player', 'staff')),
+    created_by INTEGER NOT NULL,
+    expires_at DATETIME,
+    max_uses INTEGER DEFAULT NULL,
+    used_count INTEGER DEFAULT 0,
+    player_name TEXT,
+    player_birth_date DATE,
+    player_jersey_number INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+  );
+
+  -- Trainer onboarding invites (one link can assign multiple teams)
+  CREATE TABLE IF NOT EXISTS trainer_invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE NOT NULL,
+    invited_name TEXT NOT NULL,
+    invited_user_id INTEGER,
+    team_ids TEXT NOT NULL,
+    created_by INTEGER NOT NULL,
+    expires_at DATETIME,
+    used_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (invited_user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  -- Create indexes for better performance
+  CREATE INDEX IF NOT EXISTS idx_team_members_team ON team_members(team_id);
+  CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
+  CREATE INDEX IF NOT EXISTS idx_events_team ON events(team_id);
+  CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
+  CREATE INDEX IF NOT EXISTS idx_event_responses_event ON event_responses(event_id);
+  CREATE INDEX IF NOT EXISTS idx_event_responses_user ON event_responses(user_id);
+  CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
+  CREATE INDEX IF NOT EXISTS idx_team_invites_team ON team_invites(team_id);
+  CREATE INDEX IF NOT EXISTS idx_trainer_invites_token ON trainer_invites(token);
+`);
+
+// Migration: Add profile_picture column if it doesn't exist
+try {
+  const columns = db.pragma('table_info(users)') as Array<{ name: string }>;
+  const hasUsername = columns.some((col) => col.name === 'username');
+  if (!hasUsername) {
+    db.exec('ALTER TABLE users ADD COLUMN username TEXT');
+    console.log('✅ Added username column to users table');
+
+    const usersWithoutUsername = db.prepare(
+      "SELECT id, name, email FROM users WHERE username IS NULL OR TRIM(username) = '' ORDER BY id ASC"
+    ).all() as Array<{ id: number; name: string; email: string }>;
+
+    const existingUsernames = new Set(
+      (db.prepare('SELECT LOWER(username) as username FROM users WHERE username IS NOT NULL').all() as Array<{ username: string | null }>)
+        .map((row) => (row.username || '').trim())
+        .filter((value) => value.length > 0)
+    );
+
+    const normalizeUsername = (value: string): string =>
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9_]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 30);
+
+    const createUniqueUsername = (preferredBase: string): string => {
+      const fallbackBase = preferredBase || 'user';
+      let candidate = fallbackBase;
+      let suffix = 1;
+
+      while (existingUsernames.has(candidate)) {
+        candidate = `${fallbackBase}${suffix}`;
+        suffix += 1;
+      }
+
+      existingUsernames.add(candidate);
+      return candidate;
+    };
+
+    const updateUsernameStmt = db.prepare('UPDATE users SET username = ? WHERE id = ?');
+
+    for (const user of usersWithoutUsername) {
+      const baseFromName = normalizeUsername(user.name);
+      const baseFromEmail = normalizeUsername((user.email || '').split('@')[0] || '');
+      const base = baseFromName || baseFromEmail || `user${user.id}`;
+      const username = createUniqueUsername(base);
+      updateUsernameStmt.run(username, user.id);
+    }
+  }
+
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username)');
+
+  const hasProfilePicture = columns.some((col) => col.name === 'profile_picture');
+  if (!hasProfilePicture) {
+    db.exec('ALTER TABLE users ADD COLUMN profile_picture TEXT');
+    console.log('✅ Added profile_picture column to users table');
+  }
+  
+  const hasBirthDate = columns.some((col) => col.name === 'birth_date');
+  if (!hasBirthDate) {
+    db.exec('ALTER TABLE users ADD COLUMN birth_date DATE');
+    console.log('✅ Added birth_date column to users table');
+  }
+
+  const hasPhoneNumber = columns.some((col) => col.name === 'phone_number');
+  if (!hasPhoneNumber) {
+    db.exec('ALTER TABLE users ADD COLUMN phone_number TEXT');
+    console.log('✅ Added phone_number column to users table');
+  }
+
+  const hasIsRegistered = columns.some((col) => col.name === 'is_registered');
+  if (!hasIsRegistered) {
+    db.exec('ALTER TABLE users ADD COLUMN is_registered INTEGER NOT NULL DEFAULT 1');
+    console.log('✅ Added is_registered column to users table');
+  }
+  
+  // Add player info columns to team_invites
+  const inviteColumns = db.pragma('table_info(team_invites)') as Array<{ name: string }>;
+  const hasPlayerName = inviteColumns.some((col) => col.name === 'player_name');
+  if (!hasPlayerName) {
+    db.exec('ALTER TABLE team_invites ADD COLUMN player_name TEXT');
+    db.exec('ALTER TABLE team_invites ADD COLUMN player_birth_date DATE');
+    db.exec('ALTER TABLE team_invites ADD COLUMN player_jersey_number INTEGER');
+    console.log('✅ Added player info columns to team_invites table');
+  }
+  
+  // Add series_id to events for recurring events
+  const eventColumns = db.pragma('table_info(events)') as Array<{ name: string }>;
+  const hasSeriesId = eventColumns.some((col) => col.name === 'series_id');
+  if (!hasSeriesId) {
+    db.exec('ALTER TABLE events ADD COLUMN series_id TEXT');
+    console.log('✅ Added series_id column to events table');
+  }
+  
+  // Add rsvp_deadline to events
+  const hasRsvpDeadline = eventColumns.some((col) => col.name === 'rsvp_deadline');
+  if (!hasRsvpDeadline) {
+    db.exec('ALTER TABLE events ADD COLUMN rsvp_deadline DATETIME');
+    console.log('✅ Added rsvp_deadline column to events table');
+  }
+
+  const addEventColumn = (name: string, sqlType: string) => {
+    const exists = eventColumns.some((col) => col.name === name);
+    if (!exists) {
+      db.exec(`ALTER TABLE events ADD COLUMN ${name} ${sqlType}`);
+      console.log(`✅ Added ${name} column to events table`);
+    }
+  };
+
+  addEventColumn('location_venue', 'TEXT');
+  addEventColumn('location_street', 'TEXT');
+  addEventColumn('location_zip_city', 'TEXT');
+  addEventColumn('pitch_type', 'TEXT');
+  addEventColumn('meeting_point', 'TEXT');
+  addEventColumn('arrival_minutes', 'INTEGER');
+  addEventColumn('duration_minutes', 'INTEGER');
+  addEventColumn('visibility_all', 'INTEGER DEFAULT 1');
+  addEventColumn('invite_all', 'INTEGER DEFAULT 1');
+  addEventColumn('external_game_id', 'TEXT');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_events_external_game_id ON events(external_game_id)');
+
+  // Add team_picture to teams
+  const teamColumns = db.pragma('table_info(teams)') as Array<{ name: string }>;
+  const hasTeamPicture = teamColumns.some((col) => col.name === 'team_picture');
+  if (!hasTeamPicture) {
+    db.exec('ALTER TABLE teams ADD COLUMN team_picture TEXT');
+    console.log('✅ Added team_picture column to teams table');
+  }
+
+  const hasFussballDeId = teamColumns.some((col) => col.name === 'fussballde_id');
+  if (!hasFussballDeId) {
+    db.exec('ALTER TABLE teams ADD COLUMN fussballde_id TEXT');
+    console.log('✅ Added fussballde_id column to teams table');
+  }
+
+  const hasDefaultResponse = teamColumns.some((col) => col.name === 'default_response');
+  if (!hasDefaultResponse) {
+    db.exec("ALTER TABLE teams ADD COLUMN default_response TEXT DEFAULT 'pending'");
+    console.log('✅ Added default_response column to teams table');
+  }
+
+  const hasDefaultRsvpDeadlineHours = teamColumns.some((col) => col.name === 'default_rsvp_deadline_hours');
+  if (!hasDefaultRsvpDeadlineHours) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_rsvp_deadline_hours INTEGER');
+    console.log('✅ Added default_rsvp_deadline_hours column to teams table');
+  }
+
+  const hasDefaultRsvpDeadlineHoursTraining = teamColumns.some((col) => col.name === 'default_rsvp_deadline_hours_training');
+  if (!hasDefaultRsvpDeadlineHoursTraining) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_rsvp_deadline_hours_training INTEGER');
+    db.exec('UPDATE teams SET default_rsvp_deadline_hours_training = default_rsvp_deadline_hours WHERE default_rsvp_deadline_hours_training IS NULL');
+    console.log('✅ Added default_rsvp_deadline_hours_training column to teams table');
+  }
+
+  const hasDefaultRsvpDeadlineHoursMatch = teamColumns.some((col) => col.name === 'default_rsvp_deadline_hours_match');
+  if (!hasDefaultRsvpDeadlineHoursMatch) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_rsvp_deadline_hours_match INTEGER');
+    db.exec('UPDATE teams SET default_rsvp_deadline_hours_match = default_rsvp_deadline_hours WHERE default_rsvp_deadline_hours_match IS NULL');
+    console.log('✅ Added default_rsvp_deadline_hours_match column to teams table');
+  }
+
+  const hasDefaultRsvpDeadlineHoursOther = teamColumns.some((col) => col.name === 'default_rsvp_deadline_hours_other');
+  if (!hasDefaultRsvpDeadlineHoursOther) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_rsvp_deadline_hours_other INTEGER');
+    db.exec('UPDATE teams SET default_rsvp_deadline_hours_other = default_rsvp_deadline_hours WHERE default_rsvp_deadline_hours_other IS NULL');
+    console.log('✅ Added default_rsvp_deadline_hours_other column to teams table');
+  }
+
+  const hasDefaultArrivalMinutes = teamColumns.some((col) => col.name === 'default_arrival_minutes');
+  if (!hasDefaultArrivalMinutes) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_arrival_minutes INTEGER');
+    console.log('✅ Added default_arrival_minutes column to teams table');
+  }
+
+  const hasDefaultArrivalMinutesTraining = teamColumns.some((col) => col.name === 'default_arrival_minutes_training');
+  if (!hasDefaultArrivalMinutesTraining) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_arrival_minutes_training INTEGER');
+    db.exec('UPDATE teams SET default_arrival_minutes_training = default_arrival_minutes WHERE default_arrival_minutes_training IS NULL');
+    console.log('✅ Added default_arrival_minutes_training column to teams table');
+  }
+
+  const hasDefaultArrivalMinutesMatch = teamColumns.some((col) => col.name === 'default_arrival_minutes_match');
+  if (!hasDefaultArrivalMinutesMatch) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_arrival_minutes_match INTEGER');
+    db.exec('UPDATE teams SET default_arrival_minutes_match = default_arrival_minutes WHERE default_arrival_minutes_match IS NULL');
+    console.log('✅ Added default_arrival_minutes_match column to teams table');
+  }
+
+  const hasDefaultArrivalMinutesOther = teamColumns.some((col) => col.name === 'default_arrival_minutes_other');
+  if (!hasDefaultArrivalMinutesOther) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_arrival_minutes_other INTEGER');
+    db.exec('UPDATE teams SET default_arrival_minutes_other = default_arrival_minutes WHERE default_arrival_minutes_other IS NULL');
+    console.log('✅ Added default_arrival_minutes_other column to teams table');
+  }
+
+  const trainerInviteColumns = db.pragma('table_info(trainer_invites)') as Array<{ name: string }>;
+  const hasInvitedUserId = trainerInviteColumns.some((col) => col.name === 'invited_user_id');
+  if (!hasInvitedUserId) {
+    db.exec('ALTER TABLE trainer_invites ADD COLUMN invited_user_id INTEGER');
+    console.log('✅ Added invited_user_id column to trainer_invites table');
+  }
+
+  // Ensure at least one organization exists
+  const orgCount = db.prepare('SELECT COUNT(*) as count FROM organizations').get() as { count: number };
+  if (orgCount.count === 0) {
+    db.prepare(`
+      INSERT INTO organizations (name, timezone, setup_completed) 
+      VALUES (?, ?, ?)
+    `).run('Dein Verein', 'Europe/Berlin', 0);
+    console.log('✅ Created default organization');
+  }
+} catch (error) {
+  console.error('Migration error:', error);
+}
+
+console.log('✅ Database initialized successfully');
+
+export default db;
