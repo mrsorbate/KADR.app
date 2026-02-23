@@ -759,9 +759,9 @@ export default function AdminPage() {
   };
 
   const getStatusBadgeClasses = (variant: 'ok' | 'warning' | 'error') => {
-    if (variant === 'ok') return 'bg-green-100 text-green-800';
-    if (variant === 'warning') return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
+    if (variant === 'ok') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
+    if (variant === 'warning') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100';
+    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100';
   };
 
   const getRegistrationBadge = (registrationStatus: string) => {
