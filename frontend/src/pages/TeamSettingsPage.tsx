@@ -110,6 +110,24 @@ export default function TeamSettingsPage() {
     },
   });
 
+  const importNextGamesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await teamsAPI.importNextGames(teamId, 8);
+      return response.data;
+    },
+    onSuccess: (result: any) => {
+      queryClient.invalidateQueries({ queryKey: ['events', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['all-events'] });
+      const imported = Number(result?.imported || 0);
+      const updated = Number(result?.updated || 0);
+      const skipped = Number(result?.skipped || 0);
+      showToast(`Nächste Spiele importiert: ${imported}, aktualisiert: ${updated}, übersprungen: ${skipped}`, 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Fehler beim Import der nächsten Spiele', 'error');
+    },
+  });
+
   const deleteImportedGamesMutation = useMutation({
     mutationFn: async () => {
       const response = await teamsAPI.deleteImportedGames(teamId);
@@ -484,6 +502,15 @@ export default function TeamSettingsPage() {
               className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
             >
               {updateApiSettingsMutation.isPending ? 'Speichert...' : 'API speichern'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => importNextGamesMutation.mutate()}
+              disabled={importNextGamesMutation.isPending || !fussballDeId.trim()}
+              className="btn btn-secondary w-full sm:w-auto disabled:opacity-50"
+            >
+              {importNextGamesMutation.isPending ? 'Import läuft...' : 'Nächste Spiele automatisch anlegen'}
             </button>
 
             <button
