@@ -10,7 +10,6 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
-  const [eventsView, setEventsView] = useState<'compact' | 'comfort'>('compact');
 
   // Admin wird zum Admin-Panel weitergeleitet
   if (user?.role === 'admin') {
@@ -129,35 +128,11 @@ export default function DashboardPage() {
 
       {/* Upcoming Events Section */}
       <div className="card">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold flex items-center">
+        <div className="mb-4 flex items-center justify-center">
+          <h2 className="text-xl font-semibold flex items-center text-center">
             <Calendar className="w-6 h-6 mr-2 text-primary-600" />
             Nächsten Termine
           </h2>
-          <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 p-1 bg-gray-50 dark:bg-gray-800">
-            <button
-              type="button"
-              onClick={() => setEventsView('compact')}
-              className={`px-2.5 py-1.5 text-xs sm:text-sm rounded-md transition-colors ${
-                eventsView === 'compact'
-                  ? 'bg-primary-600 text-white dark:bg-primary-500'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              Kompakt
-            </button>
-            <button
-              type="button"
-              onClick={() => setEventsView('comfort')}
-              className={`px-2.5 py-1.5 text-xs sm:text-sm rounded-md transition-colors ${
-                eventsView === 'comfort'
-                  ? 'bg-primary-600 text-white dark:bg-primary-500'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
-            >
-              Komfort
-            </button>
-          </div>
         </div>
         
         {eventsLoading ? (
