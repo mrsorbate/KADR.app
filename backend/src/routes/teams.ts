@@ -1157,5 +1157,37 @@ router.delete('/:id/picture', (req: AuthRequest, res) => {
   }
 });
 
+// Delete imported games (from API)
+router.delete('/:id/imported-games', (req: AuthRequest, res) => {
+  try {
+    const teamId = parseInt(req.params.id);
+
+    const membership = db.prepare(
+      'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
+    ).get(teamId, req.user!.id) as any;
+
+    if (!membership || membership.role !== 'trainer') {
+      return res.status(403).json({ error: 'Only trainers can delete imported games' });
+    }
+
+    // Delete all events for this team that have external_game_id (imported from API)
+    const result = db.prepare(
+      'DELETE FROM events WHERE team_id = ? AND external_game_id IS NOT NULL'
+    ).run(teamId);
+
+    // Also delete associated responses
+    db.prepare(
+      `DELETE FROM event_responses WHERE event_id IN (
+        SELECT id FROM events WHERE team_id = ? AND external_game_id IS NULL
+      )`
+    ).run(teamId);
+
+    return res.json({ success: true, deleted: result.changes });
+  } catch (error) {
+    console.error('Delete imported games error:', error);
+    return res.status(500).json({ error: 'Failed to delete imported games' });
+  }
+});
+
 export default router;
 

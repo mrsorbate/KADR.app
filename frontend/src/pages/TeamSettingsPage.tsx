@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Camera, Settings, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Camera, Settings, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../lib/useToast';
@@ -17,6 +17,7 @@ export default function TeamSettingsPage() {
 
   const [fussballDeId, setFussballDeId] = useState('');
   const [fussballDeTeamName, setFussballDeTeamName] = useState('');
+  const [showDeleteImportedGamesConfirm, setShowDeleteImportedGamesConfirm] = useState(false);
   const [defaultResponse, setDefaultResponse] = useState<'pending' | 'accepted' | 'tentative' | 'declined'>('pending');
   const [defaultRsvpDeadlineHoursTraining, setDefaultRsvpDeadlineHoursTraining] = useState('');
   const [defaultRsvpDeadlineDaysMatch, setDefaultRsvpDeadlineDaysMatch] = useState('');
@@ -124,6 +125,22 @@ export default function TeamSettingsPage() {
     },
     onError: (mutationError: any) => {
       showToast(mutationError?.response?.data?.error || 'Fehler beim Import der nächsten Spiele', 'error');
+    },
+  });
+
+  const deleteImportedGamesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await teamsAPI.deleteImportedGames(teamId);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['all-events'] });
+      setShowDeleteImportedGamesConfirm(false);
+      showToast('Importierte Spiele gelöscht', 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Fehler beim Löschen', 'error');
     },
   });
 
@@ -489,12 +506,38 @@ export default function TeamSettingsPage() {
 
             <button
               type="button"
-              onClick={() => importNextGamesMutation.mutate()}
-              disabled={importNextGamesMutation.isPending || !fussballDeId.trim()}
-              className="btn btn-secondary w-full sm:w-auto disabled:opacity-50"
+              onClick={() => setShowDeleteImportedGamesConfirm(true)}
+              disabled={deleteImportedGamesMutation.isPending}
+              className="btn btn-danger w-full sm:w-auto disabled:opacity-50"
             >
-              {importNextGamesMutation.isPending ? 'Import läuft...' : 'Nächste Spiele automatisch anlegen'}
+              {deleteImportedGamesMutation.isPending ? 'Löscht...' : '🗑️ Importierte Spiele löschen'}
             </button>
+
+            {showDeleteImportedGamesConfirm && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Importierte Spiele wirklich löschen?</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    Alle von fussball.de importierten Spiele werden gelöscht. Du kannst sie anschließend neu importieren.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeleteImportedGamesConfirm(false)}
+                      className="btn btn-secondary flex-1"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      onClick={() => deleteImportedGamesMutation.mutate()}
+                      disabled={deleteImportedGamesMutation.isPending}
+                      className="btn btn-danger flex-1 disabled:opacity-50"
+                    >
+                      Löschen
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="card space-y-4">

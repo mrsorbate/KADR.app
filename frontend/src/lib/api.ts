@@ -68,6 +68,9 @@ export const teamsAPI = {
   importNextGames: (id: number, limit: number = 8) =>
     api.post(`/teams/${id}/import-next-games`, { limit }),
 
+  deleteImportedGames: (id: number) =>
+    api.delete(`/teams/${id}/imported-games`),
+
   updateSettings: (id: number, data: {
     fussballde_id?: string;
     fussballde_team_name?: string;
