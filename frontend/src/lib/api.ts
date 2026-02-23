@@ -70,6 +70,7 @@ export const teamsAPI = {
 
   updateSettings: (id: number, data: {
     fussballde_id?: string;
+    fussballde_team_name?: string;
     default_response?: 'pending' | 'accepted' | 'tentative' | 'declined';
     default_rsvp_deadline_hours?: number | null;
     default_rsvp_deadline_hours_training?: number | null;

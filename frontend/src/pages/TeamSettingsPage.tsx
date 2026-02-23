@@ -16,6 +16,7 @@ export default function TeamSettingsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [fussballDeId, setFussballDeId] = useState('');
+  const [fussballDeTeamName, setFussballDeTeamName] = useState('');
   const [defaultResponse, setDefaultResponse] = useState<'pending' | 'accepted' | 'tentative' | 'declined'>('pending');
   const [defaultRsvpDeadlineHoursTraining, setDefaultRsvpDeadlineHoursTraining] = useState('');
   const [defaultRsvpDeadlineDaysMatch, setDefaultRsvpDeadlineDaysMatch] = useState('');
@@ -45,6 +46,7 @@ export default function TeamSettingsPage() {
   useEffect(() => {
     if (!settings) return;
     setFussballDeId(settings.fussballde_id || '');
+    setFussballDeTeamName(settings.fussballde_team_name || '');
     setDefaultResponse((settings.default_response || 'pending') as 'pending' | 'accepted' | 'tentative' | 'declined');
     const legacyDefault =
       settings.default_rsvp_deadline_hours === null || settings.default_rsvp_deadline_hours === undefined
@@ -90,6 +92,7 @@ export default function TeamSettingsPage() {
   const updateApiSettingsMutation = useMutation({
     mutationFn: (payload: {
       fussballde_id?: string;
+      fussballde_team_name?: string;
       default_response?: 'pending' | 'accepted' | 'tentative' | 'declined';
       default_rsvp_deadline_hours?: number | null;
       default_arrival_minutes?: number | null;
@@ -206,6 +209,7 @@ export default function TeamSettingsPage() {
 
     updateApiSettingsMutation.mutate({
       fussballde_id: normalizedFussballId || undefined,
+      fussballde_team_name: fussballDeTeamName.trim() || undefined,
     });
   };
 
@@ -457,6 +461,21 @@ export default function TeamSettingsPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Beispiel: 011MI8V6UC000000VTVG0001VTR8C1K7</p>
+            </div>
+
+            <div>
+              <label htmlFor="fussballde-team-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                fussball.de Team-Name
+              </label>
+              <input
+                id="fussballde-team-name"
+                type="text"
+                value={fussballDeTeamName}
+                onChange={(e) => setFussballDeTeamName(e.target.value)}
+                className="input w-full"
+                placeholder="z.B. FC Bayern München"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Der exakte Team-Name von fussball.de für die automatische Heimspiel-Erkennung</p>
             </div>
 
             <button

@@ -106,7 +106,7 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
     }
 
     const settings = db.prepare(
-      `SELECT id, fussballde_id, default_response, default_rsvp_deadline_hours,
+      `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other
        FROM teams WHERE id = ?`
@@ -128,6 +128,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
   try {
     const teamId = parseInt(req.params.id);
     const hasFussballId = Object.prototype.hasOwnProperty.call(req.body, 'fussballde_id');
+    const hasFussballTeamName = Object.prototype.hasOwnProperty.call(req.body, 'fussballde_team_name');
     const hasDefaultResponse = Object.prototype.hasOwnProperty.call(req.body, 'default_response');
     const hasDefaultRsvpDeadlineHours = Object.prototype.hasOwnProperty.call(req.body, 'default_rsvp_deadline_hours');
     const hasDefaultRsvpDeadlineHoursTraining = Object.prototype.hasOwnProperty.call(req.body, 'default_rsvp_deadline_hours_training');
@@ -140,6 +141,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
 
     const {
       fussballde_id,
+      fussballde_team_name,
       default_response,
       default_rsvp_deadline_hours,
       default_rsvp_deadline_hours_training,
@@ -151,6 +153,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_arrival_minutes_other,
     } = req.body as {
       fussballde_id?: string;
+      fussballde_team_name?: string;
       default_response?: string;
       default_rsvp_deadline_hours?: number | string | null;
       default_rsvp_deadline_hours_training?: number | string | null;
@@ -171,7 +174,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     }
 
     const team = db.prepare(
-            `SELECT id, fussballde_id, default_response, default_rsvp_deadline_hours,
+            `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other
        FROM teams WHERE id = ?`
@@ -187,6 +190,12 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
         return res.status(400).json({ error: 'Ungültiges fussball.de ID-Format' });
       }
       nextFussballId = normalizedFussballId || null;
+    }
+
+    let nextFussballTeamName = team.fussballde_team_name as string | null;
+    if (hasFussballTeamName) {
+      const normalizedTeamName = String(fussballde_team_name || '').trim();
+      nextFussballTeamName = normalizedTeamName || null;
     }
 
     const allowedDefaultResponses = new Set(['pending', 'accepted', 'tentative', 'declined']);
@@ -302,6 +311,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     db.prepare(
       `UPDATE teams
        SET fussballde_id = ?,
+           fussballde_team_name = ?,
            default_response = ?,
            default_rsvp_deadline_hours = ?,
            default_rsvp_deadline_hours_training = ?,
@@ -315,6 +325,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
        WHERE id = ?`
     ).run(
       nextFussballId,
+      nextFussballTeamName,
       nextDefaultResponse || 'pending',
       nextDefaultRsvpDeadlineHours,
       nextDefaultRsvpDeadlineHoursTraining,
@@ -328,7 +339,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     );
 
     const updatedSettings = db.prepare(
-      `SELECT id, fussballde_id, default_response, default_rsvp_deadline_hours,
+      `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other
        FROM teams WHERE id = ?`
