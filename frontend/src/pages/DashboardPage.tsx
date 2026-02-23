@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, MoreHorizontal, Check, X } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 
 export default function DashboardPage() {
@@ -278,26 +278,22 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    <div className="pt-0.5 flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
-                      <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${getStatusCircleClass(event.my_status)}`}>
-                        {getStatusIcon(event.my_status)}
-                      </div>
-
+                    <div className="pt-0.5 flex flex-col items-end" onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
                           }}
-                          className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                          title="Antwortoptionen"
-                          aria-label="Antwortoptionen öffnen"
+                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${getStatusCircleClass(event.my_status)}`}
+                          title="Status anzeigen und ändern"
+                          aria-label="Status anzeigen und ändern"
                         >
-                          <MoreHorizontal className="w-4 h-4" />
+                          {getStatusIcon(event.my_status)}
                         </button>
 
                         {openQuickActionsEventId === event.id && (
-                          <div className="absolute right-0 top-11 sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
+                          <div className="absolute right-0 top-12 sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
                             <button
                               onClick={(e) => {
                                 handleStatusClick('accepted', e);
