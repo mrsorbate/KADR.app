@@ -145,10 +145,10 @@ export default function DashboardPage() {
               
               const getStatusIcon = (status: string) => {
                 switch (status) {
-                  case 'accepted': return <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />;
-                  case 'declined': return <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />;
-                  case 'tentative': return <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />;
-                  default: return <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />;
+                  case 'accepted': return <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />;
+                  case 'declined': return <XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />;
+                  case 'tentative': return <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />;
+                  default: return <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />;
                 }
               };
 
@@ -280,14 +280,14 @@ export default function DashboardPage() {
                       )}
                     </div>
 
-                    <div className="pt-0.5 flex flex-col items-end" onClick={(e) => e.stopPropagation()}>
+                    <div className="pt-0.5 flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
                       <div className="relative">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
                           }}
-                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${getStatusCircleClass(event.my_status)} ${
+                          className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-colors ${getStatusCircleClass(event.my_status)} ${
                             openQuickActionsEventId === event.id
                               ? 'ring-2 ring-primary-400 dark:ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-800'
                               : ''
