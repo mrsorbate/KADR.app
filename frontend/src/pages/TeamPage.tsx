@@ -42,6 +42,18 @@ export default function TeamPage() {
       : [];
   const externalLeagueName = typeof externalTable?.leagueName === 'string' ? externalTable.leagueName : '';
 
+  const normalizeTeamName = (name: unknown): string => {
+    return String(name ?? '')
+      .toLowerCase()
+      .replace(/[^a-z0-9äöüß]/gi, '');
+  };
+
+  const ownTeamName = normalizeTeamName(team?.name);
+  const isOwnTeamRow = (rowTeamName: unknown): boolean => {
+    if (!ownTeamName) return false;
+    return normalizeTeamName(rowTeamName) === ownTeamName;
+  };
+
   const formatGoalDifference = (goalValue: unknown): string => {
     const raw = String(goalValue ?? '').trim();
     if (!raw) return '—';
@@ -179,7 +191,11 @@ export default function TeamPage() {
               {externalTableRows.map((row: any, index: number) => (
                 <div
                   key={`${row.team}-mobile-${index}`}
-                  className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900"
+                  className={`rounded-lg border p-3 ${
+                    isOwnTeamRow(row.team)
+                      ? 'border-primary-300 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900'
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
@@ -226,7 +242,12 @@ export default function TeamPage() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {externalTableRows.map((row: any, index: number) => (
-                    <tr key={`${row.team}-${index}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <tr
+                      key={`${row.team}-${index}`}
+                      className={isOwnTeamRow(row.team)
+                        ? 'bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800'}
+                    >
                       <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{row.place}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         <div className="flex items-center gap-2">
