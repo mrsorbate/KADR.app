@@ -82,7 +82,14 @@ export default function TeamsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {teams?.map((team: any) => (
-          <div key={team.id} className="card hover:shadow-md transition-shadow">
+          <div 
+            key={team.id} 
+            className={`card transition-all ${
+              team.created_by === user?.id 
+                ? 'hover:shadow-md bg-blue-50 border-blue-300 dark:bg-blue-900/25 dark:border-blue-700 border-2 ring-1 ring-blue-200 dark:ring-blue-800'
+                : 'hover:shadow-md'
+            }`}
+          >
             {/* Team Photo Section (Trainer only) */}
             {team.my_role === 'trainer' && (
               <div className="mb-4">
@@ -134,8 +141,15 @@ export default function TeamsPage() {
 
             <Link to={`/teams/${team.id}`} className="block">
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white break-words">{team.name}</h3>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white break-words">{team.name}</h3>
+                    {team.created_by === user?.id && (
+                      <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded dark:bg-blue-900/40 dark:text-blue-300 whitespace-nowrap">
+                        Meine Mannschaft
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
                     {team.my_role === 'trainer' ? '👨‍🏫 Trainer' : '⚽ Spieler'}
                   </p>
