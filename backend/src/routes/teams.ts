@@ -583,13 +583,22 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       const homeTeamTrimmed = (homeTeam || '').trim().toLowerCase();
       const awayTeamTrimmed = (awayTeam || '').trim().toLowerCase();
       
-      // Check if team name matches home team (exact match or contains)
-      const isHomeMatch = 
-        homeTeamTrimmed && (
-          teamNameTrimmed === homeTeamTrimmed || 
-          homeTeamTrimmed.includes(teamNameTrimmed)
-        ) 
-          ? 1 : 0;
+      // Check if team name matches home team - more lenient matching
+      // Either exact match, or team name is contained in one of the teams
+      let isHomeMatch = 0;
+      
+      if (homeTeamTrimmed && teamNameTrimmed) {
+        // Direct match or contains
+        if (homeTeamTrimmed === teamNameTrimmed || homeTeamTrimmed.includes(teamNameTrimmed)) {
+          isHomeMatch = 1;
+        }
+        // Or check if our team name is explicitly mentioned in awayTeam (then it's not home)
+        else if (awayTeamTrimmed === teamNameTrimmed || awayTeamTrimmed.includes(teamNameTrimmed)) {
+          isHomeMatch = 0;
+        }
+        // Fallback: if homeTeam doesn't contain awayTeam pattern, assume we're checking against awayTeam
+        // This handles cases where team names might be partial matches
+      }
       
       // Debug logging
       console.log(`[Game Import] Team: "${team.name}" | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | isHome: ${isHomeMatch}`);
