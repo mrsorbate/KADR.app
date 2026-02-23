@@ -241,9 +241,9 @@ export default function DashboardPage() {
                   }`}
                 >
                   <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="w-14 sm:w-16 shrink-0 text-center">
-                      <p className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-200 leading-none">{weekdayLabel}</p>
-                      <p className="mt-1 text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-100 leading-none">{dateLabel}</p>
+                    <div className="w-20 sm:w-24 shrink-0 text-center flex flex-col justify-center">
+                      <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 leading-none">{weekdayLabel}</p>
+                      <p className="mt-1 text-3xl sm:text-4xl font-semibold text-gray-800 dark:text-gray-100 leading-none tracking-tight">{dateLabel}</p>
                     </div>
 
                     <div className="flex-1 min-w-0">
