@@ -242,13 +242,15 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-start gap-3 sm:gap-4">
                     <div className="w-14 sm:w-16 shrink-0 text-center">
-                      <p className="text-lg sm:text-xl font-medium text-gray-700 dark:text-gray-200 leading-none">{weekdayLabel}</p>
-                      <p className="mt-1 text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">{dateLabel}</p>
-                      <p className="mt-1.5 text-2xl sm:text-3xl leading-none">{getTypeIcon(event.type)}</p>
+                      <p className="text-sm sm:text-base font-medium text-gray-700 dark:text-gray-200 leading-none">{weekdayLabel}</p>
+                      <p className="mt-1 text-xl sm:text-2xl font-semibold text-gray-800 dark:text-gray-100 leading-none">{dateLabel}</p>
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{displayTitle || opponent || event.title}</h3>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-lg sm:text-xl leading-none">{getTypeIcon(event.type)}</span>
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{displayTitle || opponent || event.title}</h3>
+                      </div>
 
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-700 dark:text-gray-200">
                         <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel}</span>
