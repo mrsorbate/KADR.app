@@ -558,23 +558,10 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
         continue;
       }
 
-      const homeTeam = pickFirstString(game?.homeTeam, game?.home_team, game?.home, game?.hometeam, game?.heim, game?.team_home);
-      const awayTeam = pickFirstString(game?.awayTeam, game?.away_team, game?.away, game?.awayteam, game?.gast, game?.team_away);
+      let homeTeam = pickFirstString(game?.homeTeam, game?.home_team, game?.home, game?.hometeam, game?.heim, game?.team_home);
+      let awayTeam = pickFirstString(game?.awayTeam, game?.away_team, game?.away, game?.awayteam, game?.gast, game?.team_away);
       
-      // Determine if our team is home or away
-      const teamNameTrimmed = (team.name || '').trim().toLowerCase();
-      const homeTeamTrimmed = (homeTeam || '').trim().toLowerCase();
-      const awayTeamTrimmed = (awayTeam || '').trim().toLowerCase();
-      
-      // Check if team name matches home team (exact match or contains)
-      const isHomeMatch = 
-        teamNameTrimmed === homeTeamTrimmed || 
-        homeTeamTrimmed.includes(teamNameTrimmed) 
-          ? 1 : 0;
-      
-      // Debug logging
-      console.log(`[Game Import] Team: ${team.name}, HomeTeam: ${homeTeam}, AwayTeam: ${awayTeam}, isHome: ${isHomeMatch}`);
-      
+      // Get title first
       const title = pickFirstString(
         game?.title,
         game?.match_title,
@@ -583,6 +570,29 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
         homeTeam ? `Spiel: ${homeTeam}` : '',
         'Spiel',
       );
+      
+      // If homeTeam/awayTeam not found, try to extract from title (format: "Team A - Team B")
+      if (!homeTeam && !awayTeam && title && title.includes(' - ')) {
+        const parts = title.split(' - ');
+        homeTeam = parts[0]?.trim() || '';
+        awayTeam = parts[1]?.trim() || '';
+      }
+      
+      // Determine if our team is home or away
+      const teamNameTrimmed = (team.name || '').trim().toLowerCase();
+      const homeTeamTrimmed = (homeTeam || '').trim().toLowerCase();
+      const awayTeamTrimmed = (awayTeam || '').trim().toLowerCase();
+      
+      // Check if team name matches home team (exact match or contains)
+      const isHomeMatch = 
+        homeTeamTrimmed && (
+          teamNameTrimmed === homeTeamTrimmed || 
+          homeTeamTrimmed.includes(teamNameTrimmed)
+        ) 
+          ? 1 : 0;
+      
+      // Debug logging
+      console.log(`[Game Import] Team: "${team.name}" | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | isHome: ${isHomeMatch}`);
 
       const gameIdRaw = pickFirstString(
         game?.id,
