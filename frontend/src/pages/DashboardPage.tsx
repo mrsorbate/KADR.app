@@ -243,9 +243,9 @@ export default function DashboardPage() {
                       : 'bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-600'
                   }`}
                 >
-                  <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
                     <div className="w-20 sm:w-24 shrink-0 flex items-center justify-center">
-                      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-2 py-2 sm:py-3 flex flex-col items-center justify-center text-center">
+                      <div className="flex flex-col items-center justify-center text-center">
                         <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-300 leading-none">{weekdayLabel}</p>
                         <p className="mt-1 text-3xl sm:text-4xl font-semibold tabular-nums text-gray-900 dark:text-gray-100 leading-none tracking-tight">{dateLabel}</p>
                       </div>
