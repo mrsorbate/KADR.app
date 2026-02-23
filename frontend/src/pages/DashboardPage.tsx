@@ -259,7 +259,7 @@ export default function DashboardPage() {
                 <div
                   key={event.id}
                   onClick={handleCardClick}
-                  className={`p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
+                  className={`min-h-[148px] sm:min-h-[164px] p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
                     isToday 
                       ? 'bg-primary-900/20 border-primary-700 dark:bg-primary-900/30 dark:border-primary-600' 
                       : 'bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-600'
