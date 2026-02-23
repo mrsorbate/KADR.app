@@ -247,7 +247,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-lg sm:text-xl leading-none">{getTypeIcon(event.type)}</span>
                         <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{displayTitle || opponent || event.title}</h3>
                       </div>
