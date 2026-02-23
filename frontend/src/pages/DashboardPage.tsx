@@ -280,16 +280,16 @@ export default function DashboardPage() {
                         <span className="text-sm sm:text-base font-medium">{matchTypeLabel}</span>
                       </div>
 
-                      <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs sm:text-sm">
-                        <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-300 font-medium">
+                      <div className="mt-1.5 grid grid-cols-3 gap-2 text-xs sm:text-sm tabular-nums">
+                        <span className="inline-flex items-center justify-start gap-1 text-green-700 dark:text-green-300 font-medium whitespace-nowrap">
                           <span className="w-2 h-2 rounded-full bg-green-500" />
                           {event.accepted_count} Zusagen
                         </span>
-                        <span className="inline-flex items-center gap-1 text-yellow-700 dark:text-yellow-300 font-medium">
+                        <span className="inline-flex items-center justify-start gap-1 text-yellow-700 dark:text-yellow-300 font-medium whitespace-nowrap">
                           <span className="w-2 h-2 rounded-full bg-yellow-500" />
                           {event.tentative_count} Unsicher
                         </span>
-                        <span className="inline-flex items-center gap-1 text-red-700 dark:text-red-300 font-medium">
+                        <span className="inline-flex items-center justify-start gap-1 text-red-700 dark:text-red-300 font-medium whitespace-nowrap">
                           <span className="w-2 h-2 rounded-full bg-red-500" />
                           {event.declined_count} Absagen
                         </span>
