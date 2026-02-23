@@ -366,7 +366,7 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
     }
 
     const team = db.prepare(
-      `SELECT id, name, fussballde_id, default_response, default_rsvp_deadline_hours, default_rsvp_deadline_hours_match,
+      `SELECT id, name, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours, default_rsvp_deadline_hours_match,
               default_arrival_minutes, default_arrival_minutes_match
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
@@ -429,6 +429,32 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
         return null;
       }
       return parsed;
+    };
+
+    const normalizeTeamName = (value: unknown): string => {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/ä/g, 'ae')
+        .replace(/ö/g, 'oe')
+        .replace(/ü/g, 'ue')
+        .replace(/ß/g, 'ss')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]/g, '');
+    };
+
+    const ownTeamCandidates = [team.fussballde_team_name, team.name]
+      .map((name) => normalizeTeamName(name))
+      .filter(Boolean);
+
+    const namesMatch = (leftRaw: unknown, rightRaw: unknown): boolean => {
+      const left = normalizeTeamName(leftRaw);
+      const right = normalizeTeamName(rightRaw);
+      if (!left || !right) return false;
+      if (left === right) return true;
+      if (left.length >= 6 && right.includes(left)) return true;
+      if (right.length >= 6 && left.includes(right)) return true;
+      return false;
     };
 
     const defaultRsvpHours = parseRsvpHours(team.default_rsvp_deadline_hours_match) ?? parseRsvpHours(team.default_rsvp_deadline_hours);
@@ -589,38 +615,20 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
         awayTeam = parts[1]?.trim() || '';
       }
       
-      // Determine if our team is home or away
-      // Try to match with fussballde_team_name first (if set by user), then fall back to local team name
-      const comparisonName = team.fussballde_team_name || team.name;
-      const teamNameTrimmed = (comparisonName || '').trim().toLowerCase();
-      const homeTeamTrimmed = (homeTeam || '').trim().toLowerCase();
-      const awayTeamTrimmed = (awayTeam || '').trim().toLowerCase();
-      
-      // Determine home/away by checking both homeTeam and awayTeam
-      let isHomeMatch = 0;
-      
-      // First check: Is our team the home team?
-      if (homeTeamTrimmed && teamNameTrimmed) {
-        if (homeTeamTrimmed === teamNameTrimmed || homeTeamTrimmed.includes(teamNameTrimmed)) {
-          isHomeMatch = 1;
+      let homeMatched = false;
+      let awayMatched = false;
+      for (const ownName of ownTeamCandidates) {
+        if (!homeMatched && namesMatch(ownName, homeTeam)) {
+          homeMatched = true;
+        }
+        if (!awayMatched && namesMatch(ownName, awayTeam)) {
+          awayMatched = true;
         }
       }
-      
-      // Second check: Is our team the away team? (only if not already set as home)
-      if (isHomeMatch === 0 && awayTeamTrimmed && teamNameTrimmed) {
-        if (awayTeamTrimmed === teamNameTrimmed || awayTeamTrimmed.includes(teamNameTrimmed)) {
-          isHomeMatch = 0;  // Explicitly away team
-        }
-      }
-      
-      // Fallback: If neither matched, check if homeTeam contains awayTeam - then assume away
-      // This handles cases where team names might be partial
-      if (homeTeamTrimmed && awayTeamTrimmed && !teamNameTrimmed && homeTeamTrimmed.length > awayTeamTrimmed.length) {
-        isHomeMatch = 0;  // Default to away when unsure
-      }
-      
-      // Debug logging
-      console.log(`[Game Import] Team: "${team.name}" (lookup: "${comparisonName}") | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | Comparison: home="${homeTeamTrimmed}" away="${awayTeamTrimmed}" our="${teamNameTrimmed}" | isHome: ${isHomeMatch}`);
+
+      const isHomeMatch = homeMatched && !awayMatched ? 1 : 0;
+
+      console.log(`[Game Import] Team: "${team.name}" (lookup: "${team.fussballde_team_name || team.name}") | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | homeMatched=${homeMatched} awayMatched=${awayMatched} | isHome: ${isHomeMatch}`);
 
       const gameIdRaw = pickFirstString(
         game?.id,
