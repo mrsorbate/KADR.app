@@ -562,9 +562,18 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       const awayTeam = pickFirstString(game?.awayTeam, game?.away_team, game?.away, game?.awayteam, game?.gast, game?.team_away);
       
       // Determine if our team is home or away
-      const teamName = team.name.toLowerCase();
-      const homeTeamLower = (homeTeam || '').toLowerCase();
-      const isHomeMatch = homeTeamLower.includes(teamName) ? 1 : 0;
+      const teamNameTrimmed = (team.name || '').trim().toLowerCase();
+      const homeTeamTrimmed = (homeTeam || '').trim().toLowerCase();
+      const awayTeamTrimmed = (awayTeam || '').trim().toLowerCase();
+      
+      // Check if team name matches home team (exact match or contains)
+      const isHomeMatch = 
+        teamNameTrimmed === homeTeamTrimmed || 
+        homeTeamTrimmed.includes(teamNameTrimmed) 
+          ? 1 : 0;
+      
+      // Debug logging
+      console.log(`[Game Import] Team: ${team.name}, HomeTeam: ${homeTeam}, AwayTeam: ${awayTeam}, isHome: ${isHomeMatch}`);
       
       const title = pickFirstString(
         game?.title,
