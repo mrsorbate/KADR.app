@@ -54,20 +54,35 @@ export default function TeamPage() {
       .replace(/[^a-z0-9]/g, '');
   };
 
-  const ownTeamName = normalizeTeamName(team?.name);
-  const isOwnTeamRow = (row: any): boolean => {
-    if (!ownTeamName) return false;
+  const ownTeamNames = [team?.fussballde_team_name, team?.name]
+    .map((value) => normalizeTeamName(value))
+    .filter(Boolean);
 
-    const candidates = [row?.team, row?.name, row?.teamName, row?.club, row?.clubName]
+  const isOwnTeamRow = (row: any): boolean => {
+    if (!ownTeamNames.length) return false;
+
+    const rowCandidates = [
+      row?.team,
+      row?.name,
+      row?.teamName,
+      row?.team_name,
+      row?.club,
+      row?.clubName,
+      row?.club_name,
+      row?.shortName,
+      row?.short_name,
+    ]
       .map((value) => normalizeTeamName(value))
       .filter(Boolean);
 
-    return candidates.some((candidate) => {
-      if (candidate === ownTeamName) return true;
-      if (candidate.length >= 6 && ownTeamName.includes(candidate)) return true;
-      if (ownTeamName.length >= 6 && candidate.includes(ownTeamName)) return true;
-      return false;
-    });
+    return rowCandidates.some((candidate) =>
+      ownTeamNames.some((ownName) => {
+        if (candidate === ownName) return true;
+        if (candidate.length >= 6 && ownName.includes(candidate)) return true;
+        if (ownName.length >= 6 && candidate.includes(ownName)) return true;
+        return false;
+      })
+    );
   };
 
   const formatGoalDifference = (goalValue: unknown): string => {
