@@ -596,25 +596,31 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       const homeTeamTrimmed = (homeTeam || '').trim().toLowerCase();
       const awayTeamTrimmed = (awayTeam || '').trim().toLowerCase();
       
-      // Check if team name matches home team - more lenient matching
-      // Either exact match, or team name is contained in one of the teams
+      // Determine home/away by checking both homeTeam and awayTeam
       let isHomeMatch = 0;
       
+      // First check: Is our team the home team?
       if (homeTeamTrimmed && teamNameTrimmed) {
-        // Direct match or contains
         if (homeTeamTrimmed === teamNameTrimmed || homeTeamTrimmed.includes(teamNameTrimmed)) {
           isHomeMatch = 1;
         }
-        // Or check if our team name is explicitly mentioned in awayTeam (then it's not home)
-        else if (awayTeamTrimmed === teamNameTrimmed || awayTeamTrimmed.includes(teamNameTrimmed)) {
-          isHomeMatch = 0;
+      }
+      
+      // Second check: Is our team the away team? (only if not already set as home)
+      if (isHomeMatch === 0 && awayTeamTrimmed && teamNameTrimmed) {
+        if (awayTeamTrimmed === teamNameTrimmed || awayTeamTrimmed.includes(teamNameTrimmed)) {
+          isHomeMatch = 0;  // Explicitly away team
         }
-        // Fallback: if homeTeam doesn't contain awayTeam pattern, assume we're checking against awayTeam
-        // This handles cases where team names might be partial matches
+      }
+      
+      // Fallback: If neither matched, check if homeTeam contains awayTeam - then assume away
+      // This handles cases where team names might be partial
+      if (homeTeamTrimmed && awayTeamTrimmed && !teamNameTrimmed && homeTeamTrimmed.length > awayTeamTrimmed.length) {
+        isHomeMatch = 0;  // Default to away when unsure
       }
       
       // Debug logging
-      console.log(`[Game Import] Team: "${team.name}" (fussballde: "${team.fussballde_team_name || 'notset'}") | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | isHome: ${isHomeMatch}`);
+      console.log(`[Game Import] Team: "${team.name}" (lookup: "${comparisonName}") | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | Comparison: home="${homeTeamTrimmed}" away="${awayTeamTrimmed}" our="${teamNameTrimmed}" | isHome: ${isHomeMatch}`);
 
       const gameIdRaw = pickFirstString(
         game?.id,
