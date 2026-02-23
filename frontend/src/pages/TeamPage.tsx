@@ -245,14 +245,7 @@ export default function TeamPage() {
                         {row.team}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {isOwnTeamRow(row) && (
-                        <span className="inline-flex items-center rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white dark:bg-primary-500">
-                          Dein Team
-                        </span>
-                      )}
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{row.points} Pkt</span>
-                    </div>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{row.points} Pkt</span>
                   </div>
                   <div className="mt-3 flex items-center text-xs text-gray-600 dark:text-gray-300">
                     <span>Sp: {row.games}</span>
@@ -302,11 +295,6 @@ export default function TeamPage() {
                             <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700" />
                           )}
                           <span className={isOwnTeamRow(row) ? 'font-semibold text-primary-900 dark:text-primary-100' : ''}>{row.team}</span>
-                          {isOwnTeamRow(row) && (
-                            <span className="inline-flex items-center rounded-full bg-primary-600 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white dark:bg-primary-500">
-                              Dein Team
-                            </span>
-                          )}
                         </div>
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{row.games}</td>
