@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane, Cone, Volleyball } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 
 export default function DashboardPage() {
@@ -152,14 +152,6 @@ export default function DashboardPage() {
                 }
               };
 
-              const getTypeIcon = (type: string) => {
-                switch (type) {
-                  case 'training': return '🏃';
-                  case 'match': return '⚽';
-                  default: return '📅';
-                }
-              };
-
               const getStatusCircleClass = (status: string) => {
                 switch (status) {
                   case 'accepted':
@@ -263,8 +255,12 @@ export default function DashboardPage() {
                             className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-contain bg-white"
                             loading="lazy"
                           />
+                        ) : event.type === 'training' ? (
+                          <Cone className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
+                        ) : event.type === 'match' ? (
+                          <Volleyball className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
                         ) : (
-                          <span className="text-lg sm:text-xl leading-none">{getTypeIcon(event.type)}</span>
+                          <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
                         )}
                         <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{displayTitle || opponent || event.title}</h3>
                       </div>
