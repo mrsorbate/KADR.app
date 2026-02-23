@@ -560,8 +560,8 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       `INSERT INTO events (
         team_id, title, type, description, location, location_venue, location_street, location_zip_city,
         pitch_type, meeting_point, arrival_minutes, start_time, end_time, rsvp_deadline, duration_minutes,
-        visibility_all, invite_all, created_by, external_game_id, is_home_match
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        visibility_all, invite_all, created_by, external_game_id, is_home_match, opponent_crest_url
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertResponseStmt = db.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
     const existingEventByExternalIdStmt = db.prepare('SELECT id FROM events WHERE external_game_id = ? LIMIT 1');
@@ -579,6 +579,7 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
          rsvp_deadline = ?,
          duration_minutes = ?,
          is_home_match = ?,
+         opponent_crest_url = ?,
          updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     );
@@ -643,6 +644,47 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
         ? `Spiel gegen ${opponentName}`
         : pickFirstString(rawTitle, 'Spiel');
 
+      const homeCrest = pickFirstString(
+        game?.homeImg,
+        game?.home_img,
+        game?.homeLogo,
+        game?.home_logo,
+        game?.homeBadge,
+        game?.home_badge,
+        game?.heimWappen,
+        game?.heim_wappen,
+      );
+      const awayCrest = pickFirstString(
+        game?.awayImg,
+        game?.away_img,
+        game?.awayLogo,
+        game?.away_logo,
+        game?.awayBadge,
+        game?.away_badge,
+        game?.gastWappen,
+        game?.gast_wappen,
+      );
+
+      const opponentCrestUrl = (() => {
+        if (homeMatched && !awayMatched) {
+          return awayCrest || null;
+        }
+        if (awayMatched && !homeMatched) {
+          return homeCrest || null;
+        }
+
+        if (opponentName) {
+          if (namesMatch(opponentName, homeTeam)) {
+            return homeCrest || null;
+          }
+          if (namesMatch(opponentName, awayTeam)) {
+            return awayCrest || null;
+          }
+        }
+
+        return awayCrest || homeCrest || null;
+      })();
+
       console.log(`[Game Import] Team: "${team.name}" (lookup: "${team.fussballde_team_name || team.name}") | Title: "${title}" | HomeTeam: "${homeTeam}" | AwayTeam: "${awayTeam}" | homeMatched=${homeMatched} awayMatched=${awayMatched} | isHome: ${isHomeMatch}`);
 
       const gameIdRaw = pickFirstString(
@@ -682,6 +724,7 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
           rsvpDeadline,
           120,
           isHomeMatch,
+          opponentCrestUrl,
           exists.id,
         );
 
@@ -714,6 +757,7 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
         req.user!.id,
         externalGameId,
         isHomeMatch,
+        opponentCrestUrl,
       );
 
       for (const userId of memberIds) {

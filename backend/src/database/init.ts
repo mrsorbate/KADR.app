@@ -280,6 +280,7 @@ try {
   addEventColumn('invite_all', 'INTEGER DEFAULT 1');
   addEventColumn('is_home_match', 'INTEGER DEFAULT 1');
   addEventColumn('external_game_id', 'TEXT');
+  addEventColumn('opponent_crest_url', 'TEXT');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_events_external_game_id ON events(external_game_id)');
 
   // Add team_picture to teams
