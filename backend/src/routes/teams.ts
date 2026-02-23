@@ -523,8 +523,8 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
       `INSERT INTO events (
         team_id, title, type, description, location, location_venue, location_street, location_zip_city,
         pitch_type, meeting_point, arrival_minutes, start_time, end_time, rsvp_deadline, duration_minutes,
-        visibility_all, invite_all, created_by, external_game_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        visibility_all, invite_all, created_by, external_game_id, is_home_match
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertResponseStmt = db.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
     const existingEventByExternalIdStmt = db.prepare('SELECT id FROM events WHERE external_game_id = ? LIMIT 1');
@@ -534,11 +534,14 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
          description = ?,
          location = ?,
          location_venue = ?,
+         location_street = ?,
+         location_zip_city = ?,
          arrival_minutes = ?,
          start_time = ?,
          end_time = ?,
          rsvp_deadline = ?,
          duration_minutes = ?,
+         is_home_match = ?,
          updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     );
@@ -557,6 +560,12 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
 
       const homeTeam = pickFirstString(game?.homeTeam, game?.home_team, game?.home, game?.hometeam, game?.heim, game?.team_home);
       const awayTeam = pickFirstString(game?.awayTeam, game?.away_team, game?.away, game?.awayteam, game?.gast, game?.team_away);
+      
+      // Determine if our team is home or away
+      const teamName = team.name.toLowerCase();
+      const homeTeamLower = (homeTeam || '').toLowerCase();
+      const isHomeMatch = homeTeamLower.includes(teamName) ? 1 : 0;
+      
       const title = pickFirstString(
         game?.title,
         game?.match_title,
@@ -584,6 +593,8 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
           : new Date(gameDate.getTime() - defaultRsvpHours * 60 * 60 * 1000).toISOString();
 
       const venue = pickFirstString(game?.location, game?.venue, game?.stadium, game?.place, game?.sportfield);
+      const street = pickFirstString(game?.street, game?.strasse, game?.address, game?.adresse, game?.location_street);
+      const zipCity = pickFirstString(game?.zip_city, game?.ort, game?.city, game?.location_zip_city, game?.postleitzahl_stadt);
       const description = pickFirstString(game?.competition, game?.competition_short, game?.league, game?.staffel) || null;
 
       const exists = existingEventByExternalIdStmt.get(externalGameId) as { id: number } | undefined;
@@ -593,11 +604,14 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
           description,
           venue || null,
           venue || null,
+          street || null,
+          zipCity || null,
           defaultArrivalMinutes,
           gameDate.toISOString(),
           endDate.toISOString(),
           rsvpDeadline,
           120,
+          isHomeMatch,
           exists.id,
         );
 
@@ -616,8 +630,8 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
         description,
         venue || null,
         venue || null,
-        null,
-        null,
+        street || null,
+        zipCity || null,
         null,
         null,
         defaultArrivalMinutes,
@@ -629,6 +643,7 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
         1,
         req.user!.id,
         externalGameId,
+        isHomeMatch,
       );
 
       for (const userId of memberIds) {

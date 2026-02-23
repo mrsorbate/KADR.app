@@ -278,6 +278,7 @@ try {
   addEventColumn('duration_minutes', 'INTEGER');
   addEventColumn('visibility_all', 'INTEGER DEFAULT 1');
   addEventColumn('invite_all', 'INTEGER DEFAULT 1');
+  addEventColumn('is_home_match', 'INTEGER DEFAULT 1');
   addEventColumn('external_game_id', 'TEXT');
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_events_external_game_id ON events(external_game_id)');
 
