@@ -3,9 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { eventsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
-import { Calendar, Plus, ArrowLeft, MapPin, Clock, MoreHorizontal, Check, X, HelpCircle } from 'lucide-react';
+import { Calendar, Plus, ArrowLeft, MapPin, Check, X, HelpCircle, Home, Plane, Cone, Swords } from 'lucide-react';
 
 export default function EventsPage() {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +77,7 @@ export default function EventsPage() {
       )}
 
       {/* Events List */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {events?.map((event: any) => {
           const getActionButtonClass = (status: string) => {
             const isSelected = event.my_status === status;
@@ -87,110 +85,184 @@ export default function EventsPage() {
 
             if (status === 'accepted') {
               return `${baseClass} ${isSelected ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'}`;
-            }
-
-            if (status === 'declined') {
+            } else if (status === 'declined') {
               return `${baseClass} ${isSelected ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50'}`;
+            } else if (status === 'tentative') {
+              return `${baseClass} ${isSelected ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'}`;
             }
-
-            return `${baseClass} ${isSelected ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'}`;
           };
 
-          const locationParts = [event.location_venue, event.location_street, event.location_zip_city].filter(Boolean);
-          const locationText = locationParts.length ? locationParts.join(', ') : event.location;
+          const locationText = ([event.location_venue, event.location_street, event.location_zip_city]
+            .filter(Boolean)
+            .join(', ') || event.location || '').trim();
+
+          // Extract opponent name from title
+          const getOpponentName = () => {
+            if (!event.title) return '';
+            const parts = event.title.split(' - ');
+            if (parts.length === 2) {
+              const trimmedTeamName = event.team_name.trim();
+              const part1 = parts[0].trim();
+              const part2 = parts[1].trim();
+              return part1 === trimmedTeamName ? part2 : part1;
+            }
+            return event.title;
+          };
+
+          const opponent = getOpponentName();
+          const displayTitle = String(opponent || event.title || '').replace(/^spiel\s+gegen\s+/i, '').trim();
+          const startDate = new Date(event.start_time);
+          const weekdayLabel = startDate.toLocaleDateString('de-DE', { weekday: 'short' });
+          const dayLabel = String(startDate.getDate()).padStart(2, '0');
+          const monthLabel = String(startDate.getMonth() + 1).padStart(2, '0');
+          const dateLabel = `${dayLabel}.${monthLabel}`;
+          const timeLabel = startDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+          const opponentCrestUrl = typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '';
+          
+          // Calculate meeting time if arrival_minutes is set
+          const arrivalMinutes = typeof event?.arrival_minutes === 'number' ? event.arrival_minutes : 0;
+          let meetingTimeLabel = '';
+          if (arrivalMinutes > 0) {
+            const meetingDate = new Date(startDate);
+            meetingDate.setMinutes(meetingDate.getMinutes() - arrivalMinutes);
+            meetingTimeLabel = meetingDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+          }
+          
+          const matchTypeLabel = event?.type === 'match'
+            ? (event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel')
+            : '';
 
           return (
-          <div
-            key={event.id}
-            onClick={() => navigate(`/events/${event.id}`)}
-            className="block p-4 rounded-lg border-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 hover:shadow-md transition-all"
-          >
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
-                  <span className="text-2xl">
-                    {event.type === 'training' && '🏃'}
-                    {event.type === 'match' && '⚽'}
-                    {event.type === 'other' && '📅'}
-                  </span>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">{event.title}</h3>
+            <div
+              key={event.id}
+              onClick={() => navigate(`/events/${event.id}`)}
+              className={`${locationText ? 'min-h-[136px] sm:min-h-[156px]' : 'min-h-fit'} p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-600`}
+            >
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-20 sm:w-24 shrink-0 flex items-center justify-center">
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <p className="text-[11px] sm:text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-300 leading-none">{weekdayLabel}</p>
+                    <p className="mt-1 text-3xl sm:text-4xl font-semibold tabular-nums text-gray-900 dark:text-gray-100 leading-none tracking-tight">{dateLabel}</p>
                   </div>
                 </div>
-                
-                <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300 ml-0 sm:ml-11">
-                  {locationText ? (
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="w-4 h-4" />
-                      <span>{locationText}</span>
+
+                <div className="w-px bg-gray-200 dark:bg-gray-700 shrink-0 self-stretch" />
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {event.type === 'match' && opponentCrestUrl ? (
+                      <img
+                        src={opponentCrestUrl}
+                        alt={`${displayTitle || 'Gegner'} Wappen`}
+                        className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-contain bg-white"
+                        loading="lazy"
+                      />
+                    ) : event.type === 'training' ? (
+                      <Cone className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
+                    ) : event.type === 'match' ? (
+                      <Swords className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
+                    ) : (
+                      <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
+                    )}
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{displayTitle || opponent || event.title}</h3>
+                  </div>
+
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-700 dark:text-gray-200">
+                    <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel} <span className="text-base sm:text-lg font-normal">Uhr</span></span>
+                  </div>
+
+                  {meetingTimeLabel && (
+                    <div className="mt-0.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      Treffpunkt: {meetingTimeLabel} Uhr
                     </div>
-                  ) : null}
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4" />
-                    <span>
-                      {format(new Date(event.start_time), 'PPp', { locale: de })}
+                  )}
+
+                  {matchTypeLabel && (
+                    <div className="mt-0.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                      {event.is_home_match ? (
+                        <Home className="w-3.5 h-3.5" />
+                      ) : (
+                        <Plane className="w-3.5 h-3.5" />
+                      )}
+                      <span>{matchTypeLabel}</span>
+                    </div>
+                  )}
+
+                  <div className="mt-1.5 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm tabular-nums whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1 text-green-700 dark:text-green-300 font-medium">
+                      <Check className="w-3.5 h-3.5" />
+                      {event.accepted_count}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-yellow-700 dark:text-yellow-300 font-medium">
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      {event.tentative_count}
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-red-700 dark:text-red-300 font-medium">
+                      <X className="w-3.5 h-3.5" />
+                      {event.declined_count}
                     </span>
                   </div>
+
+                  {locationText && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                      <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span className="truncate">{locationText}</span>
+                    </div>
+                  )}
                 </div>
 
-                {event.description && (
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{event.description}</p>
-                )}
-              </div>
-
-              {/* Response Stats */}
-              <div className="flex flex-col items-start sm:items-end gap-2 sm:ml-4">
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-wrap items-center gap-1">
-                    <span className="inline-flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded-full">
-                      <span className="font-semibold">✓</span>
-                      <span>{event.accepted_count}</span>
-                    </span>
-                    <span className="inline-flex items-center space-x-1 px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs rounded-full">
-                      <span className="font-semibold">✗</span>
-                      <span>{event.declined_count}</span>
-                    </span>
-                    <span className="inline-flex items-center space-x-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-xs rounded-full">
-                      <span className="font-semibold">?</span>
-                      <span>{event.tentative_count}</span>
-                    </span>
-                    <span className="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
-                      <span className="font-semibold">⏳</span>
-                      <span>{event.pending_count}</span>
-                    </span>
-                  </div>
-
-                  <div className="relative" onClick={(e) => e.stopPropagation()}>
+                <div className="pt-0.5 flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                  <div className="relative">
                     <button
                       onClick={(e) => {
-                        e.preventDefault();
+                        e.stopPropagation();
                         setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
                       }}
-                      className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                      title="Antwortoptionen"
-                      aria-label="Antwortoptionen öffnen"
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-colors ${
+                        event.my_status === 'accepted'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                          : event.my_status === 'declined'
+                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                          : event.my_status === 'tentative'
+                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                      } ${
+                        openQuickActionsEventId === event.id
+                          ? 'ring-2 ring-primary-400 dark:ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-800'
+                          : ''
+                      }`}
+                      title="Status anzeigen und ändern"
+                      aria-label="Status anzeigen und ändern"
                     >
-                      <MoreHorizontal className="w-5 h-5" />
+                      {event.my_status === 'accepted' ? (
+                        <Check className="w-5 h-5 sm:w-6 sm:h-6" />
+                      ) : event.my_status === 'declined' ? (
+                        <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                      ) : event.my_status === 'tentative' ? (
+                        <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                      ) : (
+                        <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 opacity-40" />
+                      )}
                     </button>
 
                     {openQuickActionsEventId === event.id && (
-                      <div className="absolute right-0 top-11 sm:top-1/2 sm:-translate-y-1/2 sm:right-full sm:mr-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
+                      <div className="absolute right-0 top-12 sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
                         <button
                           onClick={(e) => {
-                            e.preventDefault();
+                            e.stopPropagation();
                             updateResponseMutation.mutate({ eventId: event.id, status: 'accepted' });
                             setOpenQuickActionsEventId(null);
                           }}
                           disabled={updateResponseMutation.isPending}
                           className={getActionButtonClass('accepted')}
-                          title="Zusagen"
-                          aria-label="Zusagen"
+                          title="Zugesagt"
+                          aria-label="Zugesagt"
                         >
                           <Check className="w-4 h-4" />
                         </button>
                         <button
                           onClick={(e) => {
-                            e.preventDefault();
+                            e.stopPropagation();
                             updateResponseMutation.mutate({ eventId: event.id, status: 'tentative' });
                             setOpenQuickActionsEventId(null);
                           }}
@@ -203,7 +275,7 @@ export default function EventsPage() {
                         </button>
                         <button
                           onClick={(e) => {
-                            e.preventDefault();
+                            e.stopPropagation();
                             updateResponseMutation.mutate({ eventId: event.id, status: 'declined' });
                             setOpenQuickActionsEventId(null);
                           }}
@@ -220,7 +292,6 @@ export default function EventsPage() {
                 </div>
               </div>
             </div>
-          </div>
           );
         })}
         {events?.length === 0 && (
