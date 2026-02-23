@@ -135,13 +135,15 @@ export default function Layout({ organization }: LayoutProps) {
 
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="hidden md:flex items-center space-x-1">
-                <Link
-                  to="/"
-                  className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                >
-                  <Home className="w-4 h-4" />
-                  <span>Dashboard</span>
-                </Link>
+                {user?.role !== 'admin' && (
+                  <Link
+                    to="/"
+                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <Home className="w-4 h-4" />
+                    <span>Dashboard</span>
+                  </Link>
+                )}
                 {user?.role === 'admin' && (
                   <Link
                     to="/admin"
