@@ -49,20 +49,21 @@ export default function EventsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center space-x-3 sm:space-x-4">
-          <Link to={teamId ? `/teams/${teamId}` : '/'} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-center">
+          <Link to={teamId ? `/teams/${teamId}` : '/'} className="absolute left-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
             <ArrowLeft className="w-6 h-6" />
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-            {teamId ? 'Termine' : 'Alle Termine'}
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center space-x-3">
+            <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-primary-600" />
+            <span>Terminübersicht</span>
           </h1>
         </div>
 
         {isTrainer && (
           <Link
             to={teamId ? `/teams/${teamId}/events/new` : '/events/new'}
-            className="btn btn-primary w-full sm:w-auto flex items-center justify-center space-x-2"
+            className="btn btn-primary w-full sm:w-auto flex items-center justify-center space-x-2 mx-auto"
           >
             <Plus className="w-5 h-5" />
             <span>Termin erstellen</span>

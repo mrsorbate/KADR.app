@@ -131,7 +131,7 @@ export default function DashboardPage() {
         <div className="mb-4 flex items-center justify-center">
           <h2 className="text-xl font-semibold flex items-center text-center">
             <Calendar className="w-6 h-6 mr-2 text-primary-600" />
-            Nächsten Termine
+            Terminübersicht
           </h2>
         </div>
         
