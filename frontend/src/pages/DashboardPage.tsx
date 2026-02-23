@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane, Cone, Volleyball } from 'lucide-react';
+import { Calendar, MapPin, CheckCircle, XCircle, HelpCircle, AlertCircle, Users, RotateCw, Check, X, Home, Plane, Cone, Swords } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 
 export default function DashboardPage() {
@@ -258,7 +258,7 @@ export default function DashboardPage() {
                         ) : event.type === 'training' ? (
                           <Cone className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
                         ) : event.type === 'match' ? (
-                          <Volleyball className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
+                          <Swords className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
                         ) : (
                           <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700 dark:text-gray-300 shrink-0" />
                         )}
