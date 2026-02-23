@@ -231,7 +231,7 @@ export default function DashboardPage() {
               const opponentCrestUrl = typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '';
               const matchTypeLabel = event?.type === 'match'
                 ? (event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel')
-                : getStatusLabel(event.my_status);
+                : '';
 
               return (
                 <div
