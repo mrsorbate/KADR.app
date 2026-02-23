@@ -285,7 +285,11 @@ export default function DashboardPage() {
                             e.stopPropagation();
                             setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
                           }}
-                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${getStatusCircleClass(event.my_status)}`}
+                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-colors ${getStatusCircleClass(event.my_status)} ${
+                            openQuickActionsEventId === event.id
+                              ? 'ring-2 ring-primary-400 dark:ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-800'
+                              : ''
+                          }`}
                           title="Status anzeigen und ändern"
                           aria-label="Status anzeigen und ändern"
                         >
