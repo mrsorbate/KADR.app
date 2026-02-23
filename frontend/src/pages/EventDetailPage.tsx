@@ -142,6 +142,21 @@ export default function EventDetailPage() {
                 </div>
               )}
 
+              {event?.type === 'match' && event?.is_home_match !== undefined && (
+                <div className="flex items-start space-x-3">
+                  <span className="text-xl mt-0.5">{event.is_home_match ? '🏠' : '🚗'}</span>
+                  <div>
+                    <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                      event.is_home_match
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+                    }`}>
+                      {event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {(event?.location_venue || event?.location_street || event?.location_zip_city || event?.location) && (
                 <div className="flex items-start space-x-3">
                   <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
