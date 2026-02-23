@@ -143,10 +143,10 @@ export default function DashboardPage() {
               
               const getStatusIcon = (status: string) => {
                 switch (status) {
-                  case 'accepted': return <CheckCircle className="w-5 h-5 text-green-600" />;
-                  case 'declined': return <XCircle className="w-5 h-5 text-red-600" />;
-                  case 'tentative': return <HelpCircle className="w-5 h-5 text-yellow-600" />;
-                  default: return <AlertCircle className="w-5 h-5 text-gray-400" />;
+                  case 'accepted': return <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />;
+                  case 'declined': return <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />;
+                  case 'tentative': return <HelpCircle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />;
+                  default: return <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />;
                 }
               };
 
@@ -232,42 +232,42 @@ export default function DashboardPage() {
                 <div
                   key={event.id}
                   onClick={handleCardClick}
-                  className={`p-4 sm:p-5 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
+                  className={`p-3 sm:p-4 rounded-xl border transition-all hover:shadow-md cursor-pointer ${
                     isToday 
                       ? 'bg-primary-900/20 border-primary-700 dark:bg-primary-900/30 dark:border-primary-600' 
                       : 'bg-white border-gray-200 hover:border-primary-300 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-primary-600'
                   }`}
                 >
-                  <div className="flex items-start gap-3 sm:gap-5">
-                    <div className="w-20 shrink-0 text-center">
-                      <p className="text-3xl sm:text-4xl font-light text-gray-100 dark:text-white leading-none">{weekdayLabel}</p>
-                      <p className="mt-2 text-xl sm:text-2xl font-medium text-gray-100 dark:text-gray-100">{dateLabel}</p>
-                      <p className="mt-2 text-4xl leading-none">{getTypeIcon(event.type)}</p>
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="w-14 sm:w-16 shrink-0 text-center">
+                      <p className="text-lg sm:text-xl font-medium text-gray-700 dark:text-gray-200 leading-none">{weekdayLabel}</p>
+                      <p className="mt-1 text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">{dateLabel}</p>
+                      <p className="mt-1.5 text-2xl sm:text-3xl leading-none">{getTypeIcon(event.type)}</p>
                     </div>
 
-                    <div className="flex-1 min-w-0 pt-1">
-                      <h3 className="text-xl sm:text-3xl font-semibold text-gray-100 dark:text-white truncate">{opponent || event.title}</h3>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">{opponent || event.title}</h3>
 
-                      <div className="mt-2 flex items-center gap-3 text-2xl sm:text-5xl text-gray-100 dark:text-gray-100">
-                        <span className="text-3xl sm:text-5xl font-medium tracking-tight">{timeLabel}</span>
-                        <span className="text-2xl sm:text-4xl font-light">{matchTypeLabel}</span>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-gray-700 dark:text-gray-200">
+                        <span className="text-xl sm:text-2xl font-semibold tracking-tight">{timeLabel}</span>
+                        <span className="text-sm sm:text-base font-medium">{matchTypeLabel}</span>
                       </div>
 
-                      <div className="mt-3 flex items-center gap-2 text-lg sm:text-2xl text-green-300 dark:text-green-300">
-                        <Check className="w-6 h-6 sm:w-7 sm:h-7" />
+                      <div className="mt-1.5 flex items-center gap-1.5 text-sm sm:text-base text-green-700 dark:text-green-300">
+                        <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                         <span className="font-medium">{attendanceLabel}</span>
                       </div>
 
                       {locationText && (
-                        <div className="mt-2 flex items-center gap-2 text-sm text-gray-300 dark:text-gray-300">
-                          <MapPin className="w-4 h-4" />
+                        <div className="mt-1.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                          <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span className="truncate">{locationText}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="pt-1 flex flex-col items-end gap-3" onClick={(e) => e.stopPropagation()}>
-                      <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center ${getStatusCircleClass(event.my_status)}`}>
+                    <div className="pt-0.5 flex flex-col items-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${getStatusCircleClass(event.my_status)}`}>
                         {getStatusIcon(event.my_status)}
                       </div>
 
@@ -277,11 +277,11 @@ export default function DashboardPage() {
                             e.stopPropagation();
                             setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
                           }}
-                          className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                           title="Antwortoptionen"
                           aria-label="Antwortoptionen öffnen"
                         >
-                          <MoreHorizontal className="w-5 h-5" />
+                          <MoreHorizontal className="w-4 h-4" />
                         </button>
 
                         {openQuickActionsEventId === event.id && (
