@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl } from '../lib/utils';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { ArrowLeft, MapPin, Clock, MessageSquare, Trash2, AlertCircle, Pencil } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, MessageSquare, Trash2, AlertCircle, Pencil, Calendar, Cone, Swords } from 'lucide-react';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -90,6 +90,29 @@ export default function EventDetailPage() {
   const isTrainer = user?.role === 'trainer';
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
   const canViewResponses = isTrainer || isVisibilityAll;
+  const trainerStatusOrder = ['pending', 'accepted', 'tentative', 'declined'] as const;
+
+  const getNextTrainerStatus = (status: string): string => {
+    const currentIndex = trainerStatusOrder.indexOf(status as (typeof trainerStatusOrder)[number]);
+    if (currentIndex === -1) return 'accepted';
+    return trainerStatusOrder[(currentIndex + 1) % trainerStatusOrder.length];
+  };
+
+  const getOpponentName = () => {
+    if (!event?.title) return '';
+    const parts = event.title.split(' - ');
+    if (parts.length === 2) {
+      const trimmedTeamName = String(event?.team_name || '').trim();
+      const part1 = parts[0].trim();
+      const part2 = parts[1].trim();
+      return part1 === trimmedTeamName ? part2 : part1;
+    }
+    return event.title;
+  };
+
+  const opponent = getOpponentName();
+  const displayTitle = String(opponent || event?.title || '').replace(/^spiel\s+gegen\s+/i, '').trim();
+  const opponentCrestUrl = typeof event?.opponent_crest_url === 'string' ? event.opponent_crest_url.trim() : '';
 
   const getInitials = (name: string) => {
     return String(name || '')
@@ -133,12 +156,21 @@ export default function EventDetailPage() {
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 sm:space-x-3">
-            <span className="text-2xl sm:text-3xl">
-              {event?.type === 'training' && '🏃'}
-              {event?.type === 'match' && '⚽'}
-              {event?.type === 'other' && '📅'}
-            </span>
-            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">{event?.title}</h1>
+            {event?.type === 'match' && opponentCrestUrl ? (
+              <img
+                src={opponentCrestUrl}
+                alt={`${displayTitle || 'Gegner'} Wappen`}
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-contain bg-white"
+                loading="lazy"
+              />
+            ) : event?.type === 'training' ? (
+              <Cone className="w-7 h-7 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 shrink-0" />
+            ) : event?.type === 'match' ? (
+              <Swords className="w-7 h-7 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 shrink-0" />
+            ) : (
+              <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-gray-700 dark:text-gray-300 shrink-0" />
+            )}
+            <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">{displayTitle || opponent || event?.title}</h1>
           </div>
         </div>
       </div>
@@ -367,7 +399,21 @@ export default function EventDetailPage() {
                     };
 
                     return (
-                      <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <button
+                        key={member.id}
+                        type="button"
+                        onClick={() => {
+                          if (updatePlayerResponseMutation.isPending) return;
+                          updatePlayerResponseMutation.mutate({
+                            userId: member.id,
+                            status: getNextTrainerStatus(status),
+                          });
+                        }}
+                        disabled={updatePlayerResponseMutation.isPending}
+                        className="w-full text-left flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600 transition-colors disabled:opacity-70"
+                        title="Spieler anklicken, um den Status zu wechseln"
+                        aria-label={`Status für ${member.name} ändern`}
+                      >
                         <div className="flex items-center space-x-3 flex-1 min-w-0">
                           {renderAvatar(member.name, member.profile_picture, 'w-9 h-9')}
                           <div className="min-w-0">
@@ -380,27 +426,11 @@ export default function EventDetailPage() {
                           <span className={`px-2 py-1 text-xs rounded font-medium ${getStatusColor(status)}`}>
                             {getStatusLabel(status)}
                           </span>
-                          
-                          <select
-                            value={status}
-                            onChange={(e) => {
-                              updatePlayerResponseMutation.mutate({
-                                userId: member.id,
-                                status: e.target.value
-                              });
-                            }}
-                            disabled={updatePlayerResponseMutation.isPending}
-                            title="Rückmeldestatus ändern"
-                            aria-label="Rückmeldestatus ändern"
-                            className="text-sm px-2 py-1 rounded border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:border-blue-500"
-                          >
-                            <option value="accepted">Zugesagt</option>
-                            <option value="declined">Abgesagt</option>
-                            <option value="tentative">Vielleicht</option>
-                            <option value="pending">Keine Antwort</option>
-                          </select>
+                          <span className="text-[11px] text-blue-700 dark:text-blue-300">
+                            Antippen zum Wechseln
+                          </span>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
               </div>

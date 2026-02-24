@@ -189,9 +189,10 @@ router.get('/:id', (req: AuthRequest, res) => {
     const eventId = parseInt(req.params.id);
 
     const event = db.prepare(`
-      SELECT e.*, u.name as created_by_name
+      SELECT e.*, u.name as created_by_name, t.name as team_name
       FROM events e
       INNER JOIN users u ON e.created_by = u.id
+      INNER JOIN teams t ON e.team_id = t.id
       WHERE e.id = ?
     `).get(eventId) as any;
 
