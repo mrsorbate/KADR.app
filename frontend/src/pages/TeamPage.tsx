@@ -132,16 +132,32 @@ export default function TeamPage() {
   const players = members?.filter((m: any) => m.role === 'player') || [];
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-start sm:items-center gap-2 sm:gap-4">
-        <Link to="/" className="mt-1 sm:mt-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">{team?.name}</h1>
-          {team?.description && (
-            <p className="text-xs sm:text-base text-gray-600 dark:text-gray-300 mt-1 break-words">{team.description}</p>
-          )}
+    <div className="space-y-5 sm:space-y-6">
+      <div className="card">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+          <Link to="/" className="mt-0.5 sm:mt-0 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">{team?.name}</h1>
+            {team?.description && (
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mt-1 break-words">{team.description}</p>
+            )}
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Trainer</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{trainers.length}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Spieler</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{players.length}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-3 py-2 col-span-2 sm:col-span-2">
+            <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Liga</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{externalLeagueName || 'Unbekannte Liga'}</p>
+          </div>
         </div>
       </div>
 
@@ -165,7 +181,7 @@ export default function TeamPage() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Link
           to={`/teams/${teamId}/events`}
           className="card hover:shadow-md transition-shadow flex items-start sm:items-center space-x-2 sm:space-x-4"
@@ -222,7 +238,7 @@ export default function TeamPage() {
       </div>
 
       {/* Team Blocks */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         <div className="card">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Kaderübersicht</h2>
           <div className="mt-3 grid grid-cols-2 gap-2">
