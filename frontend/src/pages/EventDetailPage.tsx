@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import { resolveAssetUrl } from '../lib/utils';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { ArrowLeft, MapPin, Clock, User, MessageSquare, Trash2, AlertCircle, Pencil } from 'lucide-react';
+import { ArrowLeft, MapPin, Clock, MessageSquare, Trash2, AlertCircle, Pencil } from 'lucide-react';
 
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -89,6 +90,35 @@ export default function EventDetailPage() {
   const isTrainer = user?.role === 'trainer';
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
   const canViewResponses = isTrainer || isVisibilityAll;
+
+  const getInitials = (name: string) => {
+    return String(name || '')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || '')
+      .join('');
+  };
+
+  const renderAvatar = (name: string, profilePicture?: string, sizeClass = 'w-8 h-8') => {
+    const avatarUrl = resolveAssetUrl(profilePicture);
+    if (avatarUrl) {
+      return (
+        <img
+          src={avatarUrl}
+          alt={`${name} Profilbild`}
+          className={`${sizeClass} rounded-full object-cover border border-gray-200 dark:border-gray-700 bg-white`}
+          loading="lazy"
+        />
+      );
+    }
+
+    return (
+      <div className={`${sizeClass} rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold flex items-center justify-center`}>
+        {getInitials(name)}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -339,7 +369,7 @@ export default function EventDetailPage() {
                     return (
                       <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800">
                         <div className="flex items-center space-x-3 flex-1 min-w-0">
-                          <User className="w-5 h-5 text-gray-400" />
+                          {renderAvatar(member.name, member.profile_picture, 'w-9 h-9')}
                           <div className="min-w-0">
                             <p className="font-medium text-gray-900 dark:text-white break-words">{member.name}</p>
                             {member.position && <p className="text-xs text-gray-500 dark:text-gray-400">{member.position}</p>}
@@ -390,7 +420,7 @@ export default function EventDetailPage() {
                 <div className="space-y-2">
                   {acceptedResponses.map((response: any) => (
                     <div key={response.id} className="flex items-center space-x-2 text-sm">
-                      <User className="w-4 h-4 text-gray-400" />
+                        {renderAvatar(response.user_name, response.user_profile_picture)}
                       <span className="text-gray-900 dark:text-white">{response.user_name}</span>
                     </div>
                   ))}
@@ -406,7 +436,7 @@ export default function EventDetailPage() {
                   {declinedResponses.map((response: any) => (
                     <div key={response.id} className="text-sm">
                       <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4 text-gray-400" />
+                          {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
                       </div>
                       {response.comment && (
@@ -426,7 +456,7 @@ export default function EventDetailPage() {
                   <div className="space-y-2">
                     {tentativeResponses.map((response: any) => (
                       <div key={response.id} className="flex items-center space-x-2 text-sm">
-                        <User className="w-4 h-4 text-gray-400" />
+                        {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
                       </div>
                     ))}
@@ -443,7 +473,7 @@ export default function EventDetailPage() {
                   <div className="space-y-2">
                     {pendingResponses.map((response: any) => (
                       <div key={response.id} className="flex items-center space-x-2 text-sm">
-                        <User className="w-4 h-4 text-gray-400" />
+                        {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
                       </div>
                     ))}

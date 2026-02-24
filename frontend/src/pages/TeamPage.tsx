@@ -111,6 +111,19 @@ export default function TeamPage() {
     return resolveAssetUrl(team?.team_picture);
   };
 
+  const getMemberPhotoUrl = (member: any): string | undefined => {
+    return resolveAssetUrl(member?.profile_picture);
+  };
+
+  const getInitials = (name: string): string => {
+    return String(name || '')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || '')
+      .join('');
+  };
+
   if (teamLoading || membersLoading) {
     return <div className="text-center py-12">Lädt...</div>;
   }
@@ -206,6 +219,93 @@ export default function TeamPage() {
             </div>
           </Link>
         )}
+      </div>
+
+      {/* Team Blocks */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-4">
+        <div className="card">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Kaderübersicht</h2>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/70 dark:bg-gray-800/60">
+              <p className="text-xs text-gray-600 dark:text-gray-300">Trainer</p>
+              <p className="text-xl font-semibold text-gray-900 dark:text-white">{trainers.length}</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/70 dark:bg-gray-800/60">
+              <p className="text-xs text-gray-600 dark:text-gray-300">Spieler</p>
+              <p className="text-xl font-semibold text-gray-900 dark:text-white">{players.length}</p>
+            </div>
+          </div>
+          <Link
+            to={`/teams/${teamId}/kader`}
+            className="mt-3 inline-flex items-center text-sm font-medium text-primary-700 dark:text-primary-300 hover:underline"
+          >
+            Zum kompletten Kader
+          </Link>
+        </div>
+
+        <div className="card">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Trainer</h2>
+          <div className="mt-3 space-y-2">
+            {trainers.slice(0, 4).map((member: any) => {
+              const photoUrl = getMemberPhotoUrl(member);
+              return (
+                <div key={`trainer-${member.id}`} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt={`${member.name} Profilbild`}
+                      className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-700 bg-white"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold flex items-center justify-center">
+                      {getInitials(member.name)}
+                    </div>
+                  )}
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{member.name}</p>
+                </div>
+              );
+            })}
+            {trainers.length === 0 && (
+              <p className="text-sm text-gray-600 dark:text-gray-300">Keine Trainer im Team.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Spieler</h2>
+          <div className="mt-3 space-y-2">
+            {players.slice(0, 6).map((member: any) => {
+              const photoUrl = getMemberPhotoUrl(member);
+              return (
+                <div key={`player-${member.id}`} className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                  {photoUrl ? (
+                    <img
+                      src={photoUrl}
+                      alt={`${member.name} Profilbild`}
+                      className="w-9 h-9 rounded-full object-cover border border-gray-200 dark:border-gray-700 bg-white"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold flex items-center justify-center">
+                      {getInitials(member.name)}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{member.name}</p>
+                    {member.position && <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.position}</p>}
+                  </div>
+                </div>
+              );
+            })}
+            {players.length > 6 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">+ {players.length - 6} weitere Spieler</p>
+            )}
+            {players.length === 0 && (
+              <p className="text-sm text-gray-600 dark:text-gray-300">Keine Spieler im Team.</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tabelle */}

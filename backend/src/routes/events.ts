@@ -210,7 +210,7 @@ router.get('/:id', (req: AuthRequest, res) => {
 
     // Get responses
     let responses = db.prepare(`
-      SELECT er.*, u.name as user_name
+      SELECT er.*, u.name as user_name, u.profile_picture as user_profile_picture
       FROM event_responses er
       INNER JOIN users u ON er.user_id = u.id
       WHERE er.event_id = ?
