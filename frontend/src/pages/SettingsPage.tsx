@@ -17,6 +17,13 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [nickname, setNickname] = useState('');
+  const [heightCm, setHeightCm] = useState('');
+  const [weightKg, setWeightKg] = useState('');
+  const [clothingSize, setClothingSize] = useState('');
+  const [shoeSize, setShoeSize] = useState('');
+  const [jerseyNumber, setJerseyNumber] = useState('');
+  const [footedness, setFootedness] = useState('');
+  const [position, setPosition] = useState('');
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showDeletePictureConfirmModal, setShowDeletePictureConfirmModal] = useState(false);
 
@@ -48,7 +55,17 @@ export default function SettingsPage() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: (data: { phone_number?: string; nickname?: string }) => profileAPI.updateProfile(data),
+    mutationFn: (data: {
+      phone_number?: string;
+      nickname?: string;
+      height_cm?: number | null;
+      weight_kg?: number | null;
+      clothing_size?: string | null;
+      shoe_size?: string | null;
+      jersey_number?: number | null;
+      footedness?: string | null;
+      position?: string | null;
+    }) => profileAPI.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       showToast('Profil gespeichert', 'success');
@@ -164,12 +181,87 @@ export default function SettingsPage() {
     }
   }, [profile?.nickname]);
 
+  useEffect(() => {
+    if (typeof profile?.height_cm === 'number') {
+      setHeightCm(String(profile.height_cm));
+    } else {
+      setHeightCm('');
+    }
+  }, [profile?.height_cm]);
+
+  useEffect(() => {
+    if (typeof profile?.weight_kg === 'number') {
+      setWeightKg(String(profile.weight_kg));
+    } else {
+      setWeightKg('');
+    }
+  }, [profile?.weight_kg]);
+
+  useEffect(() => {
+    if (typeof profile?.clothing_size === 'string') {
+      setClothingSize(profile.clothing_size);
+    } else {
+      setClothingSize('');
+    }
+  }, [profile?.clothing_size]);
+
+  useEffect(() => {
+    if (typeof profile?.shoe_size === 'string') {
+      setShoeSize(profile.shoe_size);
+    } else {
+      setShoeSize('');
+    }
+  }, [profile?.shoe_size]);
+
+  useEffect(() => {
+    if (typeof profile?.jersey_number === 'number') {
+      setJerseyNumber(String(profile.jersey_number));
+    } else {
+      setJerseyNumber('');
+    }
+  }, [profile?.jersey_number]);
+
+  useEffect(() => {
+    if (typeof profile?.footedness === 'string') {
+      setFootedness(profile.footedness);
+    } else {
+      setFootedness('');
+    }
+  }, [profile?.footedness]);
+
+  useEffect(() => {
+    if (typeof profile?.position === 'string') {
+      setPosition(profile.position);
+    } else {
+      setPosition('');
+    }
+  }, [profile?.position]);
+
   const handlePhoneNumberSave = () => {
     updateProfileMutation.mutate({ phone_number: phoneNumber });
   };
 
   const handleNicknameSave = () => {
     updateProfileMutation.mutate({ nickname });
+  };
+
+  const parseNumberOrNull = (value: string): number | null => {
+    const normalized = value.trim();
+    if (!normalized) return null;
+    const parsed = Number.parseInt(normalized, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const handlePlayerProfileSave = () => {
+    updateProfileMutation.mutate({
+      height_cm: parseNumberOrNull(heightCm),
+      weight_kg: parseNumberOrNull(weightKg),
+      clothing_size: clothingSize.trim() ? clothingSize.trim() : null,
+      shoe_size: shoeSize.trim() ? shoeSize.trim() : null,
+      jersey_number: parseNumberOrNull(jerseyNumber),
+      footedness: footedness.trim() ? footedness.trim().toLowerCase() : null,
+      position: position.trim() ? position.trim() : null,
+    });
   };
 
   return (
@@ -341,6 +433,118 @@ export default function SettingsPage() {
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                 Nur für Trainer-Info sichtbar in deinem Profil.
               </p>
+            </div>
+          )}
+
+          {authUser?.role !== 'admin' && authUser?.role !== 'trainer' && (
+            <div className="space-y-4 pt-2">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3">Spielerprofil</h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Größe (cm)</label>
+                    <input
+                      type="number"
+                      min={100}
+                      max={250}
+                      value={heightCm}
+                      onChange={(e) => setHeightCm(e.target.value)}
+                      className="input mt-1"
+                      placeholder="z. B. 182"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Gewicht (kg)</label>
+                    <input
+                      type="number"
+                      min={30}
+                      max={250}
+                      value={weightKg}
+                      onChange={(e) => setWeightKg(e.target.value)}
+                      className="input mt-1"
+                      placeholder="z. B. 76"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Kleidergröße</label>
+                    <input
+                      type="text"
+                      value={clothingSize}
+                      onChange={(e) => setClothingSize(e.target.value)}
+                      className="input mt-1"
+                      placeholder="z. B. M"
+                      maxLength={20}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Schuhgröße</label>
+                    <input
+                      type="text"
+                      value={shoeSize}
+                      onChange={(e) => setShoeSize(e.target.value)}
+                      className="input mt-1"
+                      placeholder="z. B. 43"
+                      maxLength={20}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Trikotnummer</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={99}
+                      value={jerseyNumber}
+                      onChange={(e) => setJerseyNumber(e.target.value)}
+                      className="input mt-1"
+                      placeholder="z. B. 10"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Füßigkeit</label>
+                    <select
+                      value={footedness}
+                      onChange={(e) => setFootedness(e.target.value)}
+                      className="input mt-1"
+                      title="Füßigkeit"
+                      aria-label="Füßigkeit"
+                    >
+                      <option value="">Bitte auswählen</option>
+                      <option value="links">Links</option>
+                      <option value="rechts">Rechts</option>
+                      <option value="beidfüßig">Beidfüßig</option>
+                    </select>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Position</label>
+                    <input
+                      type="text"
+                      value={position}
+                      onChange={(e) => setPosition(e.target.value)}
+                      className="input mt-1"
+                      placeholder="z. B. Zentrales Mittelfeld"
+                      maxLength={40}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={handlePlayerProfileSave}
+                    disabled={updateProfileMutation.isPending}
+                    className="btn btn-primary w-full sm:w-auto"
+                  >
+                    {updateProfileMutation.isPending ? 'Speichert...' : 'Spielerprofil speichern'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>

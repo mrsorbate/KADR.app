@@ -236,7 +236,11 @@ router.put('/me', (req: AuthRequest, res) => {
     params.push(req.user!.id);
     db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...params);
 
-    if (user.role === 'player' && (hasJerseyNumberUpdate || hasPositionUpdate)) {
+    const hasPlayerMembership = db.prepare(
+      'SELECT 1 FROM team_members WHERE user_id = ? AND role = ? LIMIT 1'
+    ).get(req.user!.id, 'player');
+
+    if (hasPlayerMembership && (hasJerseyNumberUpdate || hasPositionUpdate)) {
       const parsedJerseyNumber = hasJerseyNumberUpdate ? parseIntOrNull(jersey_number) : undefined;
       const normalizedPosition = hasPositionUpdate
         ? ((typeof position === 'string' ? position.trim() : '') || null)
