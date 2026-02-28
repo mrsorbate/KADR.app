@@ -495,32 +495,34 @@ export default function TeamSettingsPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Der exakte Team-Name von fussball.de für die automatische Heimspiel-Erkennung</p>
             </div>
 
-            <button
-              type="button"
-              onClick={saveApiSettings}
-              disabled={updateApiSettingsMutation.isPending}
-              className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
-            >
-              {updateApiSettingsMutation.isPending ? 'Speichert...' : 'API speichern'}
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={saveApiSettings}
+                disabled={updateApiSettingsMutation.isPending}
+                className="btn btn-primary w-full disabled:opacity-50"
+              >
+                {updateApiSettingsMutation.isPending ? 'Speichert...' : 'API speichern'}
+              </button>
 
-            <button
-              type="button"
-              onClick={() => importNextGamesMutation.mutate()}
-              disabled={importNextGamesMutation.isPending || !fussballDeId.trim()}
-              className="btn btn-secondary w-full sm:w-auto disabled:opacity-50"
-            >
-              {importNextGamesMutation.isPending ? 'Import läuft...' : 'Nächste Spiele automatisch anlegen'}
-            </button>
+              <button
+                type="button"
+                onClick={() => importNextGamesMutation.mutate()}
+                disabled={importNextGamesMutation.isPending || !fussballDeId.trim()}
+                className="btn btn-secondary w-full disabled:opacity-50"
+              >
+                {importNextGamesMutation.isPending ? 'Import läuft...' : 'Spiele importieren'}
+              </button>
 
-            <button
-              type="button"
-              onClick={() => setShowDeleteImportedGamesConfirm(true)}
-              disabled={deleteImportedGamesMutation.isPending}
-              className="btn btn-danger w-full sm:w-auto disabled:opacity-50"
-            >
-              {deleteImportedGamesMutation.isPending ? 'Löscht...' : '🗑️ Importierte Spiele löschen'}
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteImportedGamesConfirm(true)}
+                disabled={deleteImportedGamesMutation.isPending}
+                className="btn w-full bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50"
+              >
+                {deleteImportedGamesMutation.isPending ? 'Löscht...' : 'Importierte Spiele löschen'}
+              </button>
+            </div>
 
             {showDeleteImportedGamesConfirm && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
