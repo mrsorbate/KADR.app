@@ -12,7 +12,7 @@ const parsePositiveInteger = (value: string | undefined, fallback: number): numb
   return Math.floor(parsed);
 };
 
-const runAutoImportCycle = async (limit: number) => {
+const runAutoImportCycle = async () => {
   if (autoImportRunning) {
     console.log('[Auto-Import] Skip cycle because previous cycle is still running');
     return;
@@ -65,7 +65,7 @@ const runAutoImportCycle = async (limit: number) => {
       }
 
       try {
-        const result = await runTeamGameImport(team.team_id, actorUserId, limit);
+        const result = await runTeamGameImport(team.team_id, actorUserId);
         importedTotal += Number(result.imported || 0);
         updatedTotal += Number(result.updated || 0);
       } catch (error) {
@@ -90,18 +90,17 @@ export const startAutoGameImportJob = () => {
   }
 
   const intervalMinutes = parsePositiveInteger(process.env.AUTO_GAME_IMPORT_INTERVAL_MINUTES, 60);
-  const importLimit = parsePositiveInteger(process.env.AUTO_GAME_IMPORT_LIMIT, 8);
   const runOnStartup = String(process.env.AUTO_GAME_IMPORT_RUN_ON_STARTUP || 'true').toLowerCase() !== 'false';
 
   if (runOnStartup) {
-    void runAutoImportCycle(importLimit);
+    void runAutoImportCycle();
   }
 
   autoImportInterval = setInterval(() => {
-    void runAutoImportCycle(importLimit);
+    void runAutoImportCycle();
   }, intervalMinutes * 60 * 1000);
 
-  console.log(`[Auto-Import] Started | every ${intervalMinutes} minute(s), limit=${importLimit}`);
+  console.log(`[Auto-Import] Started | every ${intervalMinutes} minute(s), season window 01.07-30.06`);
 };
 
 export const stopAutoGameImportJob = () => {

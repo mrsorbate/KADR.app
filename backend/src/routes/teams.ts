@@ -353,7 +353,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
 });
 
 // Update fussball.de team id (trainers only)
-export const runTeamGameImport = async (teamId: number, createdByUserId: number, limit: number = 8) => {
+export const runTeamGameImport = async (teamId: number, createdByUserId: number) => {
   const team = db.prepare(
     `SELECT id, name, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours, default_rsvp_deadline_hours_match,
             default_arrival_minutes, default_arrival_minutes_match
@@ -387,7 +387,6 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number,
   }
 
   const payload = await response.json() as any;
-  const nextGames = Array.isArray(payload?.data?.nextGames) ? payload.data.nextGames : [];
 
   const pickFirstString = (...values: unknown[]): string => {
     for (const value of values) {
@@ -538,6 +537,51 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number,
     return null;
   };
 
+  const getSeasonBounds = (referenceDate: Date): { start: Date; end: Date } => {
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth();
+    const seasonStartYear = month >= 6 ? year : year - 1;
+    const start = new Date(seasonStartYear, 6, 1, 0, 0, 0, 0);
+    const end = new Date(seasonStartYear + 1, 5, 30, 23, 59, 59, 999);
+    return { start, end };
+  };
+
+  const payloadData = payload?.data;
+  const rawCollections: any[][] = [
+    Array.isArray(payloadData) ? payloadData : [],
+    Array.isArray(payloadData?.nextGames) ? payloadData.nextGames : [],
+    Array.isArray(payloadData?.prevGames) ? payloadData.prevGames : [],
+    Array.isArray(payloadData?.games) ? payloadData.games : [],
+    Array.isArray(payloadData?.allGames) ? payloadData.allGames : [],
+    Array.isArray(payloadData?.matches) ? payloadData.matches : [],
+    Array.isArray(payloadData?.fixtures) ? payloadData.fixtures : [],
+  ];
+
+  const allCandidateGames = rawCollections.flat();
+  const seenGames = new Set<string>();
+  const uniqueGames = allCandidateGames.filter((game) => {
+    const uniqueKey = [
+      pickFirstString(game?.id, game?.match_id, game?.game_id, game?.fixture_id, game?.event_id),
+      pickFirstString(game?.datetime, game?.date_time, game?.kickoff_datetime, game?.date, game?.match_date, game?.game_date),
+      pickFirstString(game?.homeTeam, game?.home_team, game?.home, game?.hometeam, game?.heim, game?.team_home),
+      pickFirstString(game?.awayTeam, game?.away_team, game?.away, game?.awayteam, game?.gast, game?.team_away),
+      pickFirstString(game?.title, game?.match_title),
+    ].join('|');
+
+    if (seenGames.has(uniqueKey)) {
+      return false;
+    }
+    seenGames.add(uniqueKey);
+    return true;
+  });
+
+  const seasonBounds = getSeasonBounds(new Date());
+  const seasonGames = uniqueGames.filter((game) => {
+    const gameDate = parseGameDate(game);
+    if (!gameDate) return false;
+    return gameDate >= seasonBounds.start && gameDate <= seasonBounds.end;
+  });
+
   const members = db.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(teamId) as Array<{ user_id: number }>;
   const memberIds = members.map((member) => member.user_id);
   const allowedStatuses = new Set(['pending', 'accepted', 'tentative', 'declined']);
@@ -577,8 +621,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number,
   const updated: Array<{ id: number; title: string; start_time: string }> = [];
   const skipped: Array<{ reason: string; game: string }> = [];
 
-  const maxImport = Math.min(20, Math.max(1, Number(limit) || 8));
-  for (const game of nextGames.slice(0, maxImport)) {
+  for (const game of seasonGames) {
     const gameDate = parseGameDate(game);
     if (!gameDate) {
       skipped.push({ reason: 'invalid_date', game: pickFirstString(game?.id, game?.match_id, game?.game_id, game?.title) || 'unknown' });
@@ -789,7 +832,7 @@ router.post('/:id/import-next-games', async (req: AuthRequest, res) => {
     if (!team.fussballde_id) {
       return res.status(400).json({ error: 'Für dieses Team ist keine fussball.de ID hinterlegt' });
     }
-    const result = await runTeamGameImport(teamId, req.user!.id, Number(req.body?.limit) || 8);
+    const result = await runTeamGameImport(teamId, req.user!.id);
     return res.json(result);
   } catch (error) {
     console.error('Import next games error:', error);
