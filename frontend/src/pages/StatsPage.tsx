@@ -31,19 +31,7 @@ export default function StatsPage() {
       </div>
 
       {/* Event Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="card">
-          <div className="flex items-center space-x-3">
-            <div className="bg-blue-100 p-3 rounded-lg">
-              <Calendar className="w-6 h-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Kommende Termine</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.events?.upcoming || 0}</p>
-            </div>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card">
           <div className="flex items-center space-x-3">
             <div className="bg-green-100 p-3 rounded-lg">
@@ -52,6 +40,42 @@ export default function StatsPage() {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">Vergangene Termine</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.events?.past || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-100 p-3 rounded-lg">
+              <Calendar className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Training</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.events?.pastByCategory?.training || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center space-x-3">
+            <div className="bg-yellow-100 p-3 rounded-lg">
+              <Calendar className="w-6 h-6 text-yellow-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Spiele</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.events?.pastByCategory?.match || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="flex items-center space-x-3">
+            <div className="bg-purple-100 p-3 rounded-lg">
+              <Calendar className="w-6 h-6 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Sonstiges</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.events?.pastByCategory?.other || 0}</p>
             </div>
           </div>
         </div>
