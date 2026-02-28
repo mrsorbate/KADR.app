@@ -213,7 +213,7 @@ export default function TeamRosterPage() {
                   }
 
                   return (
-                    <div className="grid grid-cols-2 gap-3 text-center">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-center">
                       {hasJerseyNumber && (
                         renderInfoCard('Trikotnummer', `#${selectedMember.jersey_number}`)
                       )}
@@ -239,7 +239,7 @@ export default function TeamRosterPage() {
                       )}
 
                       {hasFootedness && (
-                        renderInfoCard('Füßigkeit', selectedMember.footedness, 'col-span-2 capitalize')
+                        renderInfoCard('Füßigkeit', selectedMember.footedness, 'sm:col-span-2 capitalize')
                       )}
                     </div>
                   );
