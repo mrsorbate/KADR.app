@@ -260,6 +260,40 @@ export default function TeamRosterPage() {
                 })()
               )}
 
+              {selectedMember.role === 'trainer' && (
+                (() => {
+                  const hasPhoneNumber = Boolean(selectedMember.phone_number);
+                  const hasEmail = Boolean(selectedMember.email);
+                  const hasAnyTrainerInfo = hasPhoneNumber || hasEmail;
+
+                  if (!hasAnyTrainerInfo) {
+                    return (
+                      <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                        Keine Daten hinterlegt.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-3 text-center">
+                      {hasPhoneNumber && (
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Handynummer</p>
+                          <p className="text-sm text-gray-900 dark:text-white">{selectedMember.phone_number}</p>
+                        </div>
+                      )}
+
+                      {hasEmail && (
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">E-Mail</p>
+                          <p className="text-sm text-gray-900 dark:text-white break-all">{selectedMember.email}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              )}
+
               <button
                 onClick={() => setSelectedMember(null)}
                 className="btn btn-secondary w-full"
