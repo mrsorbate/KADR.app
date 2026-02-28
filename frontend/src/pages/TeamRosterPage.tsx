@@ -32,6 +32,13 @@ export default function TeamRosterPage() {
   const trainers = members?.filter((m: any) => m.role === 'trainer') || [];
   const players = members?.filter((m: any) => m.role === 'player') || [];
 
+  const renderInfoCard = (label: string, value: string, extraClassName = '') => (
+    <div className={`rounded-lg bg-gray-50 dark:bg-gray-800 p-3 ${extraClassName}`}>
+      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="text-sm text-gray-900 dark:text-white break-words">{value}</p>
+    </div>
+  );
+
   if (teamLoading || membersLoading) {
     return <div className="text-center py-12">Lädt...</div>;
   }
@@ -208,52 +215,31 @@ export default function TeamRosterPage() {
                   return (
                     <div className="grid grid-cols-2 gap-3 text-center">
                       {hasJerseyNumber && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Trikotnummer</p>
-                          <p className="text-lg font-semibold text-gray-900 dark:text-white">#{selectedMember.jersey_number}</p>
-                        </div>
+                        renderInfoCard('Trikotnummer', `#${selectedMember.jersey_number}`)
                       )}
 
                       {hasPosition && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Position</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{selectedMember.position}</p>
-                        </div>
+                        renderInfoCard('Position', selectedMember.position)
                       )}
 
                       {hasHeight && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Größe</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{selectedMember.height_cm} cm</p>
-                        </div>
+                        renderInfoCard('Größe', `${selectedMember.height_cm} cm`)
                       )}
 
                       {hasWeight && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Gewicht</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{selectedMember.weight_kg} kg</p>
-                        </div>
+                        renderInfoCard('Gewicht', `${selectedMember.weight_kg} kg`)
                       )}
 
                       {hasClothingSize && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Kleidergröße</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{selectedMember.clothing_size}</p>
-                        </div>
+                        renderInfoCard('Kleidergröße', selectedMember.clothing_size)
                       )}
 
                       {hasShoeSize && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Schuhgröße</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{selectedMember.shoe_size}</p>
-                        </div>
+                        renderInfoCard('Schuhgröße', selectedMember.shoe_size)
                       )}
 
                       {hasFootedness && (
-                        <div className="col-span-2">
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Füßigkeit</p>
-                          <p className="text-sm text-gray-900 dark:text-white capitalize">{selectedMember.footedness}</p>
-                        </div>
+                        renderInfoCard('Füßigkeit', selectedMember.footedness, 'col-span-2 capitalize')
                       )}
                     </div>
                   );
@@ -275,19 +261,13 @@ export default function TeamRosterPage() {
                   }
 
                   return (
-                    <div className="space-y-3 text-center">
+                    <div className="grid grid-cols-1 gap-3 text-center">
                       {hasPhoneNumber && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Handynummer</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{selectedMember.phone_number}</p>
-                        </div>
+                        renderInfoCard('Handynummer', selectedMember.phone_number)
                       )}
 
                       {hasEmail && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">E-Mail</p>
-                          <p className="text-sm text-gray-900 dark:text-white break-all">{selectedMember.email}</p>
-                        </div>
+                        renderInfoCard('E-Mail', selectedMember.email)
                       )}
                     </div>
                   );
