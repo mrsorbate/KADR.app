@@ -50,7 +50,7 @@ router.use(authenticate);
 router.get('/me', (req: AuthRequest, res) => {
   try {
     const user = db.prepare(
-      'SELECT id, username, email, name, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
+      'SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
     ).get(req.user!.id);
 
     if (!user) {
@@ -66,28 +66,50 @@ router.get('/me', (req: AuthRequest, res) => {
 
 router.put('/me', (req: AuthRequest, res) => {
   try {
-    const { phone_number } = req.body as { phone_number?: string };
+    const { phone_number, nickname } = req.body as { phone_number?: string; nickname?: string };
 
     const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.user!.id) as { role: string } | undefined;
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (user.role !== 'trainer') {
+    const hasPhoneUpdate = Object.prototype.hasOwnProperty.call(req.body, 'phone_number');
+    const hasNicknameUpdate = Object.prototype.hasOwnProperty.call(req.body, 'nickname');
+
+    if (hasPhoneUpdate && user.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can update phone number' });
     }
 
-    const normalizedPhone = typeof phone_number === 'string' ? phone_number.trim() : '';
-    if (normalizedPhone.length > 30) {
-      return res.status(400).json({ error: 'Phone number is too long' });
+    const updates: string[] = [];
+    const params: Array<string | null | number> = [];
+
+    if (hasPhoneUpdate) {
+      const normalizedPhone = typeof phone_number === 'string' ? phone_number.trim() : '';
+      if (normalizedPhone.length > 30) {
+        return res.status(400).json({ error: 'Phone number is too long' });
+      }
+      updates.push('phone_number = ?');
+      params.push(normalizedPhone.length > 0 ? normalizedPhone : null);
     }
 
-    db.prepare(
-      'UPDATE users SET phone_number = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-    ).run(normalizedPhone.length > 0 ? normalizedPhone : null, req.user!.id);
+    if (hasNicknameUpdate) {
+      const normalizedNickname = typeof nickname === 'string' ? nickname.trim() : '';
+      if (normalizedNickname.length > 40) {
+        return res.status(400).json({ error: 'Nickname is too long' });
+      }
+      updates.push('nickname = ?');
+      params.push(normalizedNickname.length > 0 ? normalizedNickname : null);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No profile fields to update' });
+    }
+
+    params.push(req.user!.id);
+    db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...params);
 
     const updatedUser = db.prepare(
-      'SELECT id, username, email, name, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
+      'SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
     ).get(req.user!.id);
 
     res.json({ message: 'Profile updated successfully', user: updatedUser });

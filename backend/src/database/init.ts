@@ -28,6 +28,7 @@ db.exec(`
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     name TEXT NOT NULL,
+    nickname TEXT,
     role TEXT NOT NULL CHECK(role IN ('admin', 'trainer', 'player')),
     is_registered INTEGER NOT NULL DEFAULT 1,
     profile_picture TEXT,
@@ -228,6 +229,12 @@ try {
   if (!hasPhoneNumber) {
     db.exec('ALTER TABLE users ADD COLUMN phone_number TEXT');
     console.log('✅ Added phone_number column to users table');
+  }
+
+  const hasNickname = columns.some((col) => col.name === 'nickname');
+  if (!hasNickname) {
+    db.exec('ALTER TABLE users ADD COLUMN nickname TEXT');
+    console.log('✅ Added nickname column to users table');
   }
 
   const hasIsRegistered = columns.some((col) => col.name === 'is_registered');

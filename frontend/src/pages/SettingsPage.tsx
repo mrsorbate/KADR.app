@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [nickname, setNickname] = useState('');
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [showDeletePictureConfirmModal, setShowDeletePictureConfirmModal] = useState(false);
 
@@ -47,13 +48,13 @@ export default function SettingsPage() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: (data: { phone_number?: string }) => profileAPI.updateProfile(data),
+    mutationFn: (data: { phone_number?: string; nickname?: string }) => profileAPI.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      showToast('Handynummer gespeichert', 'success');
+      showToast('Profil gespeichert', 'success');
     },
     onError: (error: any) => {
-      showToast(error.response?.data?.error || 'Handynummer konnte nicht gespeichert werden', 'error');
+      showToast(error.response?.data?.error || 'Profil konnte nicht gespeichert werden', 'error');
     },
   });
 
@@ -155,8 +156,20 @@ export default function SettingsPage() {
     }
   }, [profile?.phone_number]);
 
+  useEffect(() => {
+    if (typeof profile?.nickname === 'string') {
+      setNickname(profile.nickname);
+    } else {
+      setNickname('');
+    }
+  }, [profile?.nickname]);
+
   const handlePhoneNumberSave = () => {
     updateProfileMutation.mutate({ phone_number: phoneNumber });
+  };
+
+  const handleNicknameSave = () => {
+    updateProfileMutation.mutate({ nickname });
   };
 
   return (
@@ -245,6 +258,30 @@ export default function SettingsPage() {
               Benutzername
             </label>
             <div className="mt-1 text-gray-900 dark:text-white font-medium">{profile?.username || authUser?.username}</div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Spitzname
+            </label>
+            <div className="mt-1 flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <input
+                type="text"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                className="input"
+                placeholder="z. B. Kalle"
+                maxLength={40}
+              />
+              <button
+                type="button"
+                onClick={handleNicknameSave}
+                disabled={updateProfileMutation.isPending}
+                className="btn btn-primary w-full sm:w-auto"
+              >
+                {updateProfileMutation.isPending ? 'Speichert...' : 'Speichern'}
+              </button>
+            </div>
           </div>
 
           <div>

@@ -250,7 +250,7 @@ export const adminAPI = {
 export const profileAPI = {
   getProfile: () => api.get('/profile/me'),
 
-  updateProfile: (data: { phone_number?: string }) =>
+  updateProfile: (data: { phone_number?: string; nickname?: string }) =>
     api.put('/profile/me', data),
   
   updatePassword: (data: { currentPassword: string; newPassword: string }) =>

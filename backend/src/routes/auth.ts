@@ -43,7 +43,7 @@ router.post('/login', loginAttemptLimiter, async (req, res) => {
 
     // Find user
     const user = db.prepare(
-      'SELECT id, username, email, password, name, role, profile_picture, phone_number FROM users WHERE LOWER(username) = ?'
+      'SELECT id, username, email, password, name, nickname, role, profile_picture, phone_number FROM users WHERE LOWER(username) = ?'
     ).get(normalizedUsername) as any;
 
     if (!user) {
@@ -71,6 +71,7 @@ router.post('/login', loginAttemptLimiter, async (req, res) => {
         username: user.username,
         email: user.email,
         name: user.name,
+        nickname: user.nickname,
         role: user.role,
         profile_picture: user.profile_picture,
         phone_number: user.phone_number
@@ -94,7 +95,7 @@ router.get('/me', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
 
     const user = db.prepare(
-      'SELECT id, username, email, name, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
+      'SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
     ).get(decoded.id);
 
     if (!user) {
