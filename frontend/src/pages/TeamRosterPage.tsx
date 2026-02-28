@@ -181,23 +181,61 @@ export default function TeamRosterPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
                   {selectedMember.role === 'trainer' ? 'Trainer' : 'Spieler'}
                 </p>
+                {selectedMember.nickname && (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">„{selectedMember.nickname}“</p>
+                )}
               </div>
 
-              {selectedMember.jersey_number && (
-                <div className="grid grid-cols-1 text-center">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Trikotnummer</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">#{selectedMember.jersey_number}</p>
-                  </div>
-                </div>
-              )}
+              {selectedMember.role === 'player' && (
+                <div className="grid grid-cols-2 gap-3 text-center">
+                  {selectedMember.jersey_number !== null && selectedMember.jersey_number !== undefined && selectedMember.jersey_number !== '' && (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Trikotnummer</p>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">#{selectedMember.jersey_number}</p>
+                    </div>
+                  )}
 
-              {selectedMember.position && (
-                <div className="grid grid-cols-1 text-center">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Position</p>
-                    <p className="text-sm text-gray-900 dark:text-white">{selectedMember.position}</p>
-                  </div>
+                  {selectedMember.position && (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Position</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedMember.position}</p>
+                    </div>
+                  )}
+
+                  {selectedMember.height_cm && (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Größe</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedMember.height_cm} cm</p>
+                    </div>
+                  )}
+
+                  {selectedMember.weight_kg && (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Gewicht</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedMember.weight_kg} kg</p>
+                    </div>
+                  )}
+
+                  {selectedMember.clothing_size && (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Kleidergröße</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedMember.clothing_size}</p>
+                    </div>
+                  )}
+
+                  {selectedMember.shoe_size && (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Schuhgröße</p>
+                      <p className="text-sm text-gray-900 dark:text-white">{selectedMember.shoe_size}</p>
+                    </div>
+                  )}
+
+                  {selectedMember.footedness && (
+                    <div className="col-span-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Füßigkeit</p>
+                      <p className="text-sm text-gray-900 dark:text-white capitalize">{selectedMember.footedness}</p>
+                    </div>
+                  )}
                 </div>
               )}
 

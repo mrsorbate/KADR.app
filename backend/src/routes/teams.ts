@@ -1100,7 +1100,23 @@ router.get('/:id/members', (req: AuthRequest, res) => {
     }
 
     const members = db.prepare(`
-      SELECT u.id, u.name, u.email, u.phone_number, u.birth_date, u.profile_picture, tm.role, tm.jersey_number, tm.position, tm.joined_at
+      SELECT
+        u.id,
+        u.name,
+        u.email,
+        u.phone_number,
+        u.birth_date,
+        u.profile_picture,
+        u.nickname,
+        u.height_cm,
+        u.weight_kg,
+        u.clothing_size,
+        u.shoe_size,
+        COALESCE(tm.jersey_number, u.jersey_number) as jersey_number,
+        u.footedness,
+        COALESCE(tm.position, u.position) as position,
+        tm.role,
+        tm.joined_at
       FROM team_members tm
       INNER JOIN users u ON tm.user_id = u.id
       WHERE tm.team_id = ?
