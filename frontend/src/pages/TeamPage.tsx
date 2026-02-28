@@ -145,20 +145,6 @@ export default function TeamPage() {
             )}
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-3 py-2">
-            <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Trainer</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">{trainers.length}</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-3 py-2">
-            <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Spieler</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">{players.length}</p>
-          </div>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-3 py-2 col-span-2 sm:col-span-2">
-            <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Liga</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{externalLeagueName || 'Unbekannte Liga'}</p>
-          </div>
-        </div>
       </div>
 
       {/* Team Photo */}
@@ -238,26 +224,7 @@ export default function TeamPage() {
       </div>
 
       {/* Team Blocks */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
-        <div className="card">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Kaderübersicht</h2>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/70 dark:bg-gray-800/60">
-              <p className="text-xs text-gray-600 dark:text-gray-300">Trainer</p>
-              <p className="text-xl font-semibold text-gray-900 dark:text-white">{trainers.length}</p>
-            </div>
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-gray-50/70 dark:bg-gray-800/60">
-              <p className="text-xs text-gray-600 dark:text-gray-300">Spieler</p>
-              <p className="text-xl font-semibold text-gray-900 dark:text-white">{players.length}</p>
-            </div>
-          </div>
-          <Link
-            to={`/teams/${teamId}/kader`}
-            className="mt-3 inline-flex items-center text-sm font-medium text-primary-700 dark:text-primary-300 hover:underline"
-          >
-            Zum kompletten Kader
-          </Link>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
 
         <div className="card">
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Trainer</h2>
