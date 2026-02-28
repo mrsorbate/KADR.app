@@ -21,6 +21,13 @@ export default function StatsPage() {
     return <div className="text-center py-12">Lädt...</div>;
   }
 
+  const getRate = (accepted: unknown, total: unknown): number => {
+    const acceptedValue = Number(accepted || 0);
+    const totalValue = Number(total || 0);
+    if (totalValue <= 0) return 0;
+    return Math.round((acceptedValue * 100) / totalValue);
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center space-x-3 sm:space-x-4">
@@ -106,6 +113,12 @@ export default function StatsPage() {
                 <span className="text-red-700">✗ {player.declined}</span>
                 <span className="text-gray-700 dark:text-gray-300">⏳ {player.pending}</span>
               </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-gray-300">
+                <span>Gesamt: {player.accepted}/{player.total_events} ({getRate(player.accepted, player.total_events)}%)</span>
+                <span>Training: {player.accepted_training}/{player.total_training} ({getRate(player.accepted_training, player.total_training)}%)</span>
+                <span>Spiele: {player.accepted_match}/{player.total_match} ({getRate(player.accepted_match, player.total_match)}%)</span>
+                <span>Sonstiges: {player.accepted_other}/{player.total_other} ({getRate(player.accepted_other, player.total_other)}%)</span>
+              </div>
             </div>
           ))}
         </div>
@@ -117,7 +130,16 @@ export default function StatsPage() {
                   Spieler
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Teilnahme
+                  Gesamt
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Training
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Spiele
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Sonstiges
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Zugesagt
@@ -141,14 +163,23 @@ export default function StatsPage() {
                       <progress
                         className="w-24 h-2 mr-2 [&::-webkit-progress-bar]:bg-gray-200 [&::-webkit-progress-bar]:dark:bg-gray-700 [&::-webkit-progress-value]:bg-green-600 [&::-moz-progress-bar]:bg-green-600 rounded-full overflow-hidden"
                         max={100}
-                        value={player.attendance_rate || 0}
+                        value={getRate(player.accepted, player.total_events)}
                         title="Teilnahmequote"
                         aria-label="Teilnahmequote"
                       />
                       <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {player.attendance_rate || 0}%
+                        {player.accepted}/{player.total_events} ({getRate(player.accepted, player.total_events)}%)
                       </span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
+                    {player.accepted_training}/{player.total_training} ({getRate(player.accepted_training, player.total_training)}%)
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
+                    {player.accepted_match}/{player.total_match} ({getRate(player.accepted_match, player.total_match)}%)
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300 font-medium">
+                    {player.accepted_other}/{player.total_other} ({getRate(player.accepted_other, player.total_other)}%)
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm text-green-700 font-medium">{player.accepted}</span>

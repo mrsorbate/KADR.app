@@ -33,6 +33,12 @@ router.get('/team/:teamId', (req: AuthRequest, res) => {
             COUNT(CASE WHEN er.status = 'tentative' THEN 1 END) as tentative,
             COUNT(CASE WHEN er.status = 'pending' OR er.status IS NULL THEN 1 END) as pending,
             COUNT(e.id) as total_events,
+            COUNT(CASE WHEN e.type = 'training' THEN 1 END) as total_training,
+            COUNT(CASE WHEN e.type = 'match' THEN 1 END) as total_match,
+            COUNT(CASE WHEN e.type = 'other' THEN 1 END) as total_other,
+            COUNT(CASE WHEN e.type = 'training' AND er.status = 'accepted' THEN 1 END) as accepted_training,
+            COUNT(CASE WHEN e.type = 'match' AND er.status = 'accepted' THEN 1 END) as accepted_match,
+            COUNT(CASE WHEN e.type = 'other' AND er.status = 'accepted' THEN 1 END) as accepted_other,
             COALESCE(ROUND(COUNT(CASE WHEN er.status = 'accepted' THEN 1 END) * 100.0 / NULLIF(COUNT(e.id), 0), 2), 0) as attendance_rate
           FROM team_members tm
           INNER JOIN users u ON tm.user_id = u.id
@@ -50,6 +56,12 @@ router.get('/team/:teamId', (req: AuthRequest, res) => {
             COUNT(CASE WHEN er.status = 'tentative' THEN 1 END) as tentative,
             COUNT(CASE WHEN er.status = 'pending' OR er.status IS NULL THEN 1 END) as pending,
             COUNT(e.id) as total_events,
+            COUNT(CASE WHEN e.type = 'training' THEN 1 END) as total_training,
+            COUNT(CASE WHEN e.type = 'match' THEN 1 END) as total_match,
+            COUNT(CASE WHEN e.type = 'other' THEN 1 END) as total_other,
+            COUNT(CASE WHEN e.type = 'training' AND er.status = 'accepted' THEN 1 END) as accepted_training,
+            COUNT(CASE WHEN e.type = 'match' AND er.status = 'accepted' THEN 1 END) as accepted_match,
+            COUNT(CASE WHEN e.type = 'other' AND er.status = 'accepted' THEN 1 END) as accepted_other,
             COALESCE(ROUND(COUNT(CASE WHEN er.status = 'accepted' THEN 1 END) * 100.0 / NULLIF(COUNT(e.id), 0), 2), 0) as attendance_rate
           FROM team_members tm
           INNER JOIN users u ON tm.user_id = u.id
