@@ -1099,22 +1099,32 @@ router.get('/:id/members', (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Not a team member' });
     }
 
+    const userTableColumns = db.prepare("PRAGMA table_info('users')").all() as Array<{ name: string }>;
+    const availableUserColumns = new Set(userTableColumns.map((column) => column.name));
+
+    const userColumnOrNull = (columnName: string, alias?: string) => {
+      const targetAlias = alias || columnName;
+      return availableUserColumns.has(columnName)
+        ? `u.${columnName} AS ${targetAlias}`
+        : `NULL AS ${targetAlias}`;
+    };
+
     const members = db.prepare(`
       SELECT
-        u.id,
-        u.name,
-        u.email,
-        u.phone_number,
-        u.birth_date,
-        u.profile_picture,
-        u.nickname,
-        u.height_cm,
-        u.weight_kg,
-        u.clothing_size,
-        u.shoe_size,
-        COALESCE(tm.jersey_number, u.jersey_number) as jersey_number,
-        u.footedness,
-        COALESCE(tm.position, u.position) as position,
+        u.id AS id,
+        u.name AS name,
+        u.email AS email,
+        ${userColumnOrNull('phone_number')},
+        ${userColumnOrNull('birth_date')},
+        ${userColumnOrNull('profile_picture')},
+        ${userColumnOrNull('nickname')},
+        ${userColumnOrNull('height_cm')},
+        ${userColumnOrNull('weight_kg')},
+        ${userColumnOrNull('clothing_size')},
+        ${userColumnOrNull('shoe_size')},
+        COALESCE(tm.jersey_number, ${availableUserColumns.has('jersey_number') ? 'u.jersey_number' : 'NULL'}) as jersey_number,
+        ${userColumnOrNull('footedness')},
+        COALESCE(tm.position, ${availableUserColumns.has('position') ? 'u.position' : 'NULL'}) as position,
         tm.role,
         tm.joined_at
       FROM team_members tm
