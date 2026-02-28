@@ -507,18 +507,29 @@ export default function SettingsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Füßigkeit</label>
-                    <select
-                      value={footedness}
-                      onChange={(e) => setFootedness(e.target.value)}
-                      className="input mt-1"
-                      title="Füßigkeit"
-                      aria-label="Füßigkeit"
-                    >
-                      <option value="">Bitte auswählen</option>
-                      <option value="links">Links</option>
-                      <option value="rechts">Rechts</option>
-                      <option value="beidfüßig">Beidfüßig</option>
-                    </select>
+                    <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-label="Füßigkeit auswählen">
+                      {[
+                        { value: 'links', label: 'Links' },
+                        { value: 'rechts', label: 'Rechts' },
+                        { value: 'beidfüßig', label: 'Beidfüßig' },
+                      ].map((option) => {
+                        const isActive = footedness === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setFootedness(isActive ? '' : option.value)}
+                            className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                              isActive
+                                ? 'border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-900/30 dark:text-primary-200'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="sm:col-span-2">
