@@ -116,7 +116,7 @@ export default function TeamPage() {
   }
 
   const trainers = members?.filter((m: any) => m.role === 'trainer') || [];
-  const players = members?.filter((m: any) => m.role === 'player') || [];
+  const players = members?.filter((m: any) => m.role !== 'trainer') || [];
 
   return (
     <div className="space-y-5 sm:space-y-6">

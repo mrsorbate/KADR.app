@@ -30,7 +30,7 @@ export default function TeamRosterPage() {
   });
 
   const trainers = members?.filter((m: any) => m.role === 'trainer') || [];
-  const players = members?.filter((m: any) => m.role === 'player') || [];
+  const players = members?.filter((m: any) => m.role !== 'trainer') || [];
 
   const renderInfoCard = (label: string, value: string, extraClassName = '') => (
     <div className={`rounded-lg bg-gray-50 dark:bg-gray-800 p-3 ${extraClassName}`}>
@@ -193,7 +193,7 @@ export default function TeamRosterPage() {
                 )}
               </div>
 
-              {selectedMember.role === 'player' && (
+              {selectedMember.role !== 'trainer' && (
                 (() => {
                   const hasJerseyNumber = selectedMember.jersey_number !== null && selectedMember.jersey_number !== undefined && selectedMember.jersey_number !== '';
                   const hasPosition = Boolean(selectedMember.position);
