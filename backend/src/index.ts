@@ -14,6 +14,7 @@ import invitesRoutes from './routes/invites';
 import adminRoutes from './routes/admin';
 import profileRoutes from './routes/profile';
 import settingsRoutes from './routes/settings';
+import { startAutoGameImportJob } from './services/autoGameImport';
 
 dotenv.config();
 
@@ -169,4 +170,5 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  startAutoGameImportJob();
 });
