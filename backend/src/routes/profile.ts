@@ -50,7 +50,7 @@ router.use(authenticate);
 router.get('/me', (req: AuthRequest, res) => {
   try {
     const user = db.prepare(
-      'SELECT id, email, name, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
+      'SELECT id, username, email, name, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
     ).get(req.user!.id);
 
     if (!user) {
@@ -87,7 +87,7 @@ router.put('/me', (req: AuthRequest, res) => {
     ).run(normalizedPhone.length > 0 ? normalizedPhone : null, req.user!.id);
 
     const updatedUser = db.prepare(
-      'SELECT id, email, name, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
+      'SELECT id, username, email, name, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
     ).get(req.user!.id);
 
     res.json({ message: 'Profile updated successfully', user: updatedUser });

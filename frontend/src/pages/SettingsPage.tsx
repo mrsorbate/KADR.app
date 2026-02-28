@@ -242,6 +242,13 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Benutzername
+            </label>
+            <div className="mt-1 text-gray-900 dark:text-white font-medium">{profile?.username || authUser?.username}</div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Name
             </label>
             <div className="mt-1 text-gray-900 dark:text-white font-medium">{profile?.name || authUser?.name}</div>
