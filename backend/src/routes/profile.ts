@@ -8,6 +8,29 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+const ensureProfileUserColumns = () => {
+  const columns = db.pragma('table_info(users)') as Array<{ name: string }>;
+  const existing = new Set(columns.map((column) => column.name));
+
+  const requiredColumns: Array<{ name: string; sqlType: string }> = [
+    { name: 'phone_number', sqlType: 'TEXT' },
+    { name: 'nickname', sqlType: 'TEXT' },
+    { name: 'height_cm', sqlType: 'INTEGER' },
+    { name: 'weight_kg', sqlType: 'INTEGER' },
+    { name: 'clothing_size', sqlType: 'TEXT' },
+    { name: 'shoe_size', sqlType: 'TEXT' },
+    { name: 'jersey_number', sqlType: 'INTEGER' },
+    { name: 'footedness', sqlType: 'TEXT' },
+    { name: 'position', sqlType: 'TEXT' },
+  ];
+
+  for (const column of requiredColumns) {
+    if (!existing.has(column.name)) {
+      db.exec(`ALTER TABLE users ADD COLUMN ${column.name} ${column.sqlType}`);
+    }
+  }
+};
+
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -49,8 +72,12 @@ router.use(authenticate);
 // Get current user profile
 router.get('/me', (req: AuthRequest, res) => {
   try {
+    ensureProfileUserColumns();
+
     const user = db.prepare(
-      'SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
+      `SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
+              height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
+       FROM users WHERE id = ?`
     ).get(req.user!.id);
 
     if (!user) {
@@ -66,7 +93,29 @@ router.get('/me', (req: AuthRequest, res) => {
 
 router.put('/me', (req: AuthRequest, res) => {
   try {
-    const { phone_number, nickname } = req.body as { phone_number?: string; nickname?: string };
+    ensureProfileUserColumns();
+
+    const {
+      phone_number,
+      nickname,
+      height_cm,
+      weight_kg,
+      clothing_size,
+      shoe_size,
+      jersey_number,
+      footedness,
+      position,
+    } = req.body as {
+      phone_number?: string;
+      nickname?: string;
+      height_cm?: number | string;
+      weight_kg?: number | string;
+      clothing_size?: string;
+      shoe_size?: string;
+      jersey_number?: number | string;
+      footedness?: string;
+      position?: string;
+    };
 
     const user = db.prepare('SELECT role FROM users WHERE id = ?').get(req.user!.id) as { role: string } | undefined;
     if (!user) {
@@ -75,6 +124,13 @@ router.put('/me', (req: AuthRequest, res) => {
 
     const hasPhoneUpdate = Object.prototype.hasOwnProperty.call(req.body, 'phone_number');
     const hasNicknameUpdate = Object.prototype.hasOwnProperty.call(req.body, 'nickname');
+    const hasHeightUpdate = Object.prototype.hasOwnProperty.call(req.body, 'height_cm');
+    const hasWeightUpdate = Object.prototype.hasOwnProperty.call(req.body, 'weight_kg');
+    const hasClothingSizeUpdate = Object.prototype.hasOwnProperty.call(req.body, 'clothing_size');
+    const hasShoeSizeUpdate = Object.prototype.hasOwnProperty.call(req.body, 'shoe_size');
+    const hasJerseyNumberUpdate = Object.prototype.hasOwnProperty.call(req.body, 'jersey_number');
+    const hasFootednessUpdate = Object.prototype.hasOwnProperty.call(req.body, 'footedness');
+    const hasPositionUpdate = Object.prototype.hasOwnProperty.call(req.body, 'position');
 
     if (hasPhoneUpdate && user.role !== 'trainer') {
       return res.status(403).json({ error: 'Only trainers can update phone number' });
@@ -101,6 +157,78 @@ router.put('/me', (req: AuthRequest, res) => {
       params.push(normalizedNickname.length > 0 ? normalizedNickname : null);
     }
 
+    const parseIntOrNull = (value: unknown): number | null => {
+      if (value === null || value === undefined || String(value).trim() === '') {
+        return null;
+      }
+      const parsed = parseInt(String(value), 10);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    if (hasHeightUpdate) {
+      const parsedHeight = parseIntOrNull(height_cm);
+      if (parsedHeight !== null && (parsedHeight < 100 || parsedHeight > 250)) {
+        return res.status(400).json({ error: 'Größe muss zwischen 100 und 250 cm liegen' });
+      }
+      updates.push('height_cm = ?');
+      params.push(parsedHeight);
+    }
+
+    if (hasWeightUpdate) {
+      const parsedWeight = parseIntOrNull(weight_kg);
+      if (parsedWeight !== null && (parsedWeight < 30 || parsedWeight > 250)) {
+        return res.status(400).json({ error: 'Gewicht muss zwischen 30 und 250 kg liegen' });
+      }
+      updates.push('weight_kg = ?');
+      params.push(parsedWeight);
+    }
+
+    if (hasClothingSizeUpdate) {
+      const normalizedClothingSize = typeof clothing_size === 'string' ? clothing_size.trim() : '';
+      if (normalizedClothingSize.length > 20) {
+        return res.status(400).json({ error: 'Kleidergröße ist zu lang' });
+      }
+      updates.push('clothing_size = ?');
+      params.push(normalizedClothingSize.length > 0 ? normalizedClothingSize : null);
+    }
+
+    if (hasShoeSizeUpdate) {
+      const normalizedShoeSize = typeof shoe_size === 'string' ? shoe_size.trim() : '';
+      if (normalizedShoeSize.length > 20) {
+        return res.status(400).json({ error: 'Schuhgröße ist zu lang' });
+      }
+      updates.push('shoe_size = ?');
+      params.push(normalizedShoeSize.length > 0 ? normalizedShoeSize : null);
+    }
+
+    if (hasJerseyNumberUpdate) {
+      const parsedJerseyNumber = parseIntOrNull(jersey_number);
+      if (parsedJerseyNumber !== null && (parsedJerseyNumber < 0 || parsedJerseyNumber > 99)) {
+        return res.status(400).json({ error: 'Trikotnummer muss zwischen 0 und 99 liegen' });
+      }
+      updates.push('jersey_number = ?');
+      params.push(parsedJerseyNumber);
+    }
+
+    if (hasFootednessUpdate) {
+      const normalizedFootedness = typeof footedness === 'string' ? footedness.trim().toLowerCase() : '';
+      const allowedFootedness = new Set(['links', 'rechts', 'beidfüßig', 'beidfuessig']);
+      if (normalizedFootedness && !allowedFootedness.has(normalizedFootedness)) {
+        return res.status(400).json({ error: 'Füßigkeit ist ungültig' });
+      }
+      updates.push('footedness = ?');
+      params.push(normalizedFootedness.length > 0 ? normalizedFootedness : null);
+    }
+
+    if (hasPositionUpdate) {
+      const normalizedPosition = typeof position === 'string' ? position.trim() : '';
+      if (normalizedPosition.length > 40) {
+        return res.status(400).json({ error: 'Position ist zu lang' });
+      }
+      updates.push('position = ?');
+      params.push(normalizedPosition.length > 0 ? normalizedPosition : null);
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No profile fields to update' });
     }
@@ -108,8 +236,28 @@ router.put('/me', (req: AuthRequest, res) => {
     params.push(req.user!.id);
     db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...params);
 
+    if (user.role === 'player' && (hasJerseyNumberUpdate || hasPositionUpdate)) {
+      const parsedJerseyNumber = hasJerseyNumberUpdate ? parseIntOrNull(jersey_number) : undefined;
+      const normalizedPosition = hasPositionUpdate
+        ? ((typeof position === 'string' ? position.trim() : '') || null)
+        : undefined;
+
+      if (hasJerseyNumberUpdate && hasPositionUpdate) {
+        db.prepare('UPDATE team_members SET jersey_number = ?, position = ? WHERE user_id = ? AND role = ?')
+          .run(parsedJerseyNumber ?? null, normalizedPosition ?? null, req.user!.id, 'player');
+      } else if (hasJerseyNumberUpdate) {
+        db.prepare('UPDATE team_members SET jersey_number = ? WHERE user_id = ? AND role = ?')
+          .run(parsedJerseyNumber ?? null, req.user!.id, 'player');
+      } else if (hasPositionUpdate) {
+        db.prepare('UPDATE team_members SET position = ? WHERE user_id = ? AND role = ?')
+          .run(normalizedPosition ?? null, req.user!.id, 'player');
+      }
+    }
+
     const updatedUser = db.prepare(
-      'SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at FROM users WHERE id = ?'
+      `SELECT id, username, email, name, nickname, role, profile_picture, phone_number, created_at,
+              height_cm, weight_kg, clothing_size, shoe_size, jersey_number, footedness, position
+       FROM users WHERE id = ?`
     ).get(req.user!.id);
 
     res.json({ message: 'Profile updated successfully', user: updatedUser });
