@@ -117,7 +117,6 @@ export default function TeamRosterPage() {
                     ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
                     : 'opacity-75 cursor-default'
                 }`}
-                aria-disabled={!canOpenPlayerProfiles}
               >
                 {resolveAssetUrl(player.profile_picture) ? (
                   <img
