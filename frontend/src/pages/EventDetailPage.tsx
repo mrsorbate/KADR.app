@@ -18,6 +18,9 @@ export default function EventDetailPage() {
   const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
   const [comment, setComment] = useState('');
   const [responseValidationMessage, setResponseValidationMessage] = useState('');
+  const [responseCommentModalOpen, setResponseCommentModalOpen] = useState(false);
+  const [pendingResponseStatus, setPendingResponseStatus] = useState<'declined' | 'tentative' | null>(null);
+  const [pendingResponseComment, setPendingResponseComment] = useState('');
   const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -111,6 +114,33 @@ export default function EventDetailPage() {
       status,
       comment: nextComment.trim() ? nextComment : undefined,
     });
+  };
+
+  const openResponseCommentModal = (status: 'declined' | 'tentative') => {
+    if (status === 'tentative' && !canChooseTentative) {
+      setResponseValidationMessage('Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.');
+      return;
+    }
+
+    setResponseValidationMessage('');
+    setPendingResponseStatus(status);
+    setPendingResponseComment(comment || '');
+    setResponseCommentModalOpen(true);
+  };
+
+  const submitResponseCommentModal = () => {
+    if (!pendingResponseStatus) return;
+
+    if (pendingResponseStatus === 'declined' && !pendingResponseComment.trim()) {
+      setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
+      return;
+    }
+
+    setSelectedStatus(pendingResponseStatus);
+    saveOwnResponse(pendingResponseStatus, pendingResponseComment);
+    setResponseCommentModalOpen(false);
+    setPendingResponseStatus(null);
+    setPendingResponseComment('');
   };
   const handleTrainerStatusChangeFromModule = (userId: number, targetStatus: string) => {
     if (!isTrainer || updatePlayerResponseMutation.isPending) return;
@@ -462,7 +492,7 @@ export default function EventDetailPage() {
                   type="button"
                   onClick={() => {
                     setSelectedStatus('accepted');
-                    saveOwnResponse('accepted', comment);
+                    saveOwnResponse('accepted', '');
                   }}
                   className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
                     selectedStatus === 'accepted'
@@ -474,10 +504,7 @@ export default function EventDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedStatus('tentative');
-                    saveOwnResponse('tentative', comment);
-                  }}
+                  onClick={() => openResponseCommentModal('tentative')}
                   className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
                     selectedStatus === 'tentative'
                       ? 'bg-yellow-600 text-white'
@@ -489,10 +516,7 @@ export default function EventDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedStatus('declined');
-                    saveOwnResponse('declined', comment);
-                  }}
+                  onClick={() => openResponseCommentModal('declined')}
                   className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors sm:col-span-1 ${
                     selectedStatus === 'declined'
                       ? 'bg-red-600 text-white'
@@ -503,29 +527,11 @@ export default function EventDetailPage() {
                 </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Kommentar {selectedStatus === 'declined' ? '(Pflicht bei Absage)' : '(optional)'}
-                </label>
-                <textarea
-                  value={comment}
-                  onChange={(e) => {
-                    setComment(e.target.value);
-                    if (responseValidationMessage && e.target.value.trim()) {
-                      setResponseValidationMessage('');
-                    }
-                  }}
-                  onBlur={() => saveOwnResponse(selectedStatus, comment)}
-                  className="input"
-                  rows={2}
-                  placeholder="z.B. Komme später..."
-                />
-                {!canChooseTentative && (
-                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                    Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.
-                  </p>
-                )}
-              </div>
+              {!canChooseTentative && (
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.
+                </p>
+              )}
 
               {responseValidationMessage && (
                 <p className="text-sm text-red-600 dark:text-red-400">{responseValidationMessage}</p>
@@ -610,6 +616,61 @@ export default function EventDetailPage() {
       )}
 
       {/* Delete Modal */}
+      {responseCommentModalOpen && pendingResponseStatus && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="card max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {pendingResponseStatus === 'declined' ? 'Grund für Absage' : 'Kommentar für Unsicher'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-3">
+              {pendingResponseStatus === 'declined'
+                ? 'Bitte gib einen Grund an (Pflichtfeld).'
+                : 'Optionaler Kommentar für den Status Unsicher.'}
+            </p>
+
+            <textarea
+              value={pendingResponseComment}
+              onChange={(e) => {
+                setPendingResponseComment(e.target.value);
+                if (responseValidationMessage && e.target.value.trim()) {
+                  setResponseValidationMessage('');
+                }
+              }}
+              className="input"
+              rows={3}
+              placeholder={pendingResponseStatus === 'declined' ? 'z.B. Krank' : 'z.B. Entscheidung folgt am Abend'}
+            />
+
+            {responseValidationMessage && (
+              <p className="text-sm text-red-600 dark:text-red-400 mt-2">{responseValidationMessage}</p>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setResponseCommentModalOpen(false);
+                  setPendingResponseStatus(null);
+                  setPendingResponseComment('');
+                  setResponseValidationMessage('');
+                }}
+                className="btn btn-secondary flex-1"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={submitResponseCommentModal}
+                className="btn btn-primary flex-1"
+                disabled={updateResponseMutation.isPending}
+              >
+                {updateResponseMutation.isPending ? 'Speichert...' : 'Speichern'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {deleteModalOpen && event?.series_id && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="card max-w-md w-full mx-4">
