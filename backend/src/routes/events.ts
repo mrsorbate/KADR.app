@@ -134,6 +134,7 @@ router.get('/my-all', (req: AuthRequest, res) => {
 router.get('/', (req: AuthRequest, res) => {
   try {
     const { team_id, from, to } = req.query;
+    const now = new Date().toISOString();
 
     if (!team_id) {
       return res.status(400).json({ error: 'team_id is required' });
@@ -150,21 +151,29 @@ router.get('/', (req: AuthRequest, res) => {
 
     let query = `
       SELECT e.*, 
+             t.name as team_name,
              u.name as created_by_name,
+             er.status as my_status,
+             er.comment as my_comment,
              (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'accepted') as accepted_count,
              (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'declined') as declined_count,
              (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'tentative') as tentative_count,
              (SELECT COUNT(*) FROM event_responses WHERE event_id = e.id AND status = 'pending') as pending_count
       FROM events e
+      INNER JOIN teams t ON e.team_id = t.id
       INNER JOIN users u ON e.created_by = u.id
+      LEFT JOIN event_responses er ON er.event_id = e.id AND er.user_id = ?
       WHERE e.team_id = ?
     `;
 
-    const params: any[] = [team_id];
+    const params: any[] = [req.user!.id, team_id];
 
     if (from) {
       query += ' AND e.start_time >= ?';
       params.push(from);
+    } else if (!to) {
+      query += ' AND e.start_time >= ?';
+      params.push(now);
     }
 
     if (to) {
@@ -172,7 +181,7 @@ router.get('/', (req: AuthRequest, res) => {
       params.push(to);
     }
 
-    query += ' ORDER BY e.start_time DESC';
+    query += ' ORDER BY e.start_time ASC';
 
     const events = db.prepare(query).all(...params);
 
