@@ -316,42 +316,6 @@ export default function EventDetailPage() {
     || (event?.arrival_minutes !== null && event?.arrival_minutes !== undefined);
   const backTarget = event?.team_id ? `/teams/${event.team_id}/events` : '/events';
 
-  const repeatType = String((event as any)?.repeat_type || 'none');
-  const repeatUntil = (event as any)?.repeat_until;
-  const repeatDaysRaw = (event as any)?.repeat_days;
-  const repeatDays = (() => {
-    if (Array.isArray(repeatDaysRaw)) {
-      return repeatDaysRaw.map((value) => Number(value)).filter((value) => Number.isInteger(value));
-    }
-    if (typeof repeatDaysRaw === 'string' && repeatDaysRaw.trim()) {
-      try {
-        const parsed = JSON.parse(repeatDaysRaw);
-        if (Array.isArray(parsed)) {
-          return parsed.map((value) => Number(value)).filter((value) => Number.isInteger(value));
-        }
-      } catch {
-        return [];
-      }
-    }
-    return [];
-  })();
-  const weekdayLabelMap: Record<number, string> = {
-    0: 'So',
-    1: 'Mo',
-    2: 'Di',
-    3: 'Mi',
-    4: 'Do',
-    5: 'Fr',
-    6: 'Sa',
-  };
-  const repeatDaysLabel = repeatDays
-    .filter((day, index, arr) => arr.indexOf(day) === index)
-    .sort((a, b) => a - b)
-    .map((day) => weekdayLabelMap[day])
-    .filter(Boolean)
-    .join(', ');
-  const hasSeriesModule = repeatType !== 'none';
-
   const renderResponseModule = (
     title: string,
     count: number,
@@ -564,34 +528,6 @@ export default function EventDetailPage() {
               )}
             </div>
           </div>
-
-          {hasSeriesModule && (
-            <div className="card">
-              <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Serientermin</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Wiederholung</p>
-                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                    {repeatType === 'weekly' ? 'Wöchentlich' : repeatType === 'custom' ? 'Bestimmte Wochentage' : repeatType}
-                  </p>
-                </div>
-
-                {repeatUntil && (
-                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Endet am</p>
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">{safeFormatDate(repeatUntil, 'PPP')}</p>
-                  </div>
-                )}
-
-                {repeatDaysLabel && (
-                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
-                    <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Wochentage</p>
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">{repeatDaysLabel}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Your Response */}
           <div className="card">
