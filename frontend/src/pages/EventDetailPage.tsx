@@ -22,6 +22,9 @@ export default function EventDetailPage() {
   const [pendingResponseStatus, setPendingResponseStatus] = useState<'declined' | 'tentative' | null>(null);
   const [pendingResponseComment, setPendingResponseComment] = useState('');
   const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
+  const [trainerDeclineTargetUserId, setTrainerDeclineTargetUserId] = useState<number | null>(null);
+  const [trainerDeclineComment, setTrainerDeclineComment] = useState('');
+  const [trainerDeclineValidationMessage, setTrainerDeclineValidationMessage] = useState('');
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
@@ -142,22 +145,47 @@ export default function EventDetailPage() {
     setPendingResponseStatus(null);
     setPendingResponseComment('');
   };
+
+  const openTrainerDeclineModal = (userId: number) => {
+    setTrainerDeclineTargetUserId(userId);
+    setTrainerDeclineComment('');
+    setTrainerDeclineValidationMessage('');
+  };
+
+  const closeTrainerDeclineModal = () => {
+    setTrainerDeclineTargetUserId(null);
+    setTrainerDeclineComment('');
+    setTrainerDeclineValidationMessage('');
+  };
+
+  const submitTrainerDecline = () => {
+    if (!trainerDeclineTargetUserId) return;
+    const declineReason = trainerDeclineComment.trim();
+
+    if (!declineReason) {
+      setTrainerDeclineValidationMessage('Bitte gib einen Grund für die Absage an.');
+      return;
+    }
+
+    updatePlayerResponseMutation.mutate({
+      userId: trainerDeclineTargetUserId,
+      status: 'declined',
+      comment: declineReason,
+    });
+    closeTrainerDeclineModal();
+  };
+
   const handleTrainerStatusChangeFromModule = (userId: number, targetStatus: string) => {
     if (!isTrainer || updatePlayerResponseMutation.isPending) return;
 
-    let commentForUpdate: string | undefined;
     if (targetStatus === 'declined') {
-      const declineReason = window.prompt('Bitte Grund für die Absage eingeben:')?.trim() || '';
-      if (!declineReason) {
-        return;
-      }
-      commentForUpdate = declineReason;
+      openTrainerDeclineModal(userId);
+      return;
     }
 
     updatePlayerResponseMutation.mutate({
       userId,
       status: targetStatus,
-      comment: commentForUpdate,
     });
   };
 
@@ -732,6 +760,53 @@ export default function EventDetailPage() {
                 disabled={updateResponseMutation.isPending}
               >
                 {updateResponseMutation.isPending ? 'Speichert...' : 'Speichern'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {trainerDeclineTargetUserId !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="card max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Grund für Absage</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-3">
+              Bitte gib einen Grund an (Pflichtfeld).
+            </p>
+
+            <textarea
+              value={trainerDeclineComment}
+              onChange={(e) => {
+                setTrainerDeclineComment(e.target.value);
+                if (trainerDeclineValidationMessage && e.target.value.trim()) {
+                  setTrainerDeclineValidationMessage('');
+                }
+              }}
+              className="input"
+              rows={3}
+              placeholder="z.B. Krank"
+            />
+
+            {trainerDeclineValidationMessage && (
+              <p className="text-sm text-red-600 dark:text-red-400 mt-2">{trainerDeclineValidationMessage}</p>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={closeTrainerDeclineModal}
+                className="btn btn-secondary flex-1"
+                disabled={updatePlayerResponseMutation.isPending}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={submitTrainerDecline}
+                className="btn btn-primary flex-1"
+                disabled={updatePlayerResponseMutation.isPending}
+              >
+                {updatePlayerResponseMutation.isPending ? 'Speichert...' : 'Speichern'}
               </button>
             </div>
           </div>
