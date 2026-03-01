@@ -68,8 +68,8 @@ export default function EventCreatePage() {
   const stepDurationMinutes = (delta: number) => {
     setEventData((prev) => {
       const current = parseInt(prev.duration_minutes, 10);
-      const baseValue = Number.isFinite(current) ? current : 1;
-      const nextValue = Math.max(1, baseValue + delta);
+      const baseValue = Number.isFinite(current) ? current : 5;
+      const nextValue = Math.max(5, baseValue + delta);
       return { ...prev, duration_minutes: String(nextValue) };
     });
   };
@@ -586,7 +586,7 @@ export default function EventCreatePage() {
                 </button>
                 <input
                   type="number"
-                  min={1}
+                  min={5}
                   step={5}
                   required
                   value={eventData.duration_minutes}
