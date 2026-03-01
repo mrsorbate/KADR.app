@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import { useToast } from '../lib/useToast';
 import { Calendar, Plus, ArrowLeft, MapPin, Check, X, HelpCircle, Home, Plane, Cone, Swords } from 'lucide-react';
 
 export default function EventsPage() {
@@ -10,6 +11,7 @@ export default function EventsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const teamId = id ? parseInt(id) : null;
   const { user } = useAuthStore();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
@@ -70,7 +72,55 @@ export default function EventsPage() {
     retry: 1,
   });
 
-  const calendarSubscribeUrl = String(teamSettings?.calendar_webcal_url || teamSettings?.calendar_feed_url || '').trim();
+  const calendarWebcalUrl = String(teamSettings?.calendar_webcal_url || '').trim();
+  const calendarFeedUrl = String(teamSettings?.calendar_feed_url || '').trim();
+  const calendarSubscribeUrl = calendarWebcalUrl || calendarFeedUrl;
+
+  const handleCalendarSubscribeClick = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (!calendarSubscribeUrl) {
+      return;
+    }
+
+    if (!calendarWebcalUrl || !calendarFeedUrl) {
+      return;
+    }
+
+    event.preventDefault();
+
+    let fallbackTimer: number | null = null;
+
+    const cleanup = () => {
+      if (fallbackTimer !== null) {
+        window.clearTimeout(fallbackTimer);
+        fallbackTimer = null;
+      }
+      window.removeEventListener('pagehide', cleanup);
+      window.removeEventListener('blur', cleanup);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        cleanup();
+      }
+    };
+
+    window.addEventListener('pagehide', cleanup);
+    window.addEventListener('blur', cleanup);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    fallbackTimer = window.setTimeout(async () => {
+      cleanup();
+      try {
+        await navigator.clipboard.writeText(calendarFeedUrl);
+        showToast('Kalender-Link kopiert. Wenn sich nichts geöffnet hat, den Link manuell im Kalender abonnieren.', 'success');
+      } catch {
+        showToast('Falls sich nichts geöffnet hat, bitte den Kalender-Link manuell abonnieren.', 'warning');
+      }
+    }, 1600);
+
+    window.location.href = calendarWebcalUrl;
+  };
 
   const eventItems = Array.isArray(events) ? events : [];
 
@@ -394,6 +444,7 @@ export default function EventsPage() {
         {teamId && calendarSubscribeUrl && (
           <a
             href={calendarSubscribeUrl}
+            onClick={handleCalendarSubscribeClick}
             className="btn btn-secondary w-full sm:w-auto flex items-center justify-center space-x-2"
           >
             <Calendar className="w-5 h-5" />
