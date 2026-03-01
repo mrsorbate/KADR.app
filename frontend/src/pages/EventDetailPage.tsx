@@ -25,6 +25,13 @@ const MATCH_LINEUP_LAYOUT: Array<{ slot: string; className: string }> = [
   { slot: 'RF', className: 'right-[12%] bottom-[70%]' },
 ];
 
+type SquadPlayer = {
+  id: number;
+  name: string;
+  profile_picture?: string;
+  jersey_number?: number | null;
+};
+
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const eventId = parseInt(id!);
@@ -132,29 +139,35 @@ export default function EventDetailPage() {
   const canManageMatchSquad = Boolean(isTrainer && isMatchEvent);
   const canViewMatchSquad = Boolean(isMatchEvent && (isTrainer || matchSquad?.is_released === 1));
 
-  const squadCandidatePlayers = Array.from(
-    new Map(
+  const squadCandidatePlayers: SquadPlayer[] = Array.from(
+    new Map<number, SquadPlayer>(
       (event?.responses || []).map((response: any) => [
         Number(response.user_id),
         {
           id: Number(response.user_id),
           name: String(response.user_name || ''),
-          profile_picture: response.user_profile_picture || null,
+          profile_picture: response.user_profile_picture || undefined,
         },
       ])
     ).values()
   )
-    .filter((player) => Number.isInteger(player.id))
-    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    .filter((player: SquadPlayer) => Number.isInteger(player.id))
+    .sort((a: SquadPlayer, b: SquadPlayer) => a.name.localeCompare(b.name, 'de'));
 
-  const squadPlayerMeta = Array.isArray(matchSquad?.squad_players)
-    ? matchSquad.squad_players
+  const squadPlayerMeta: SquadPlayer[] = Array.isArray(matchSquad?.squad_players)
+    ? matchSquad.squad_players.map((player: any) => ({
+        id: Number(player?.id),
+        name: String(player?.name || ''),
+        profile_picture: player?.profile_picture || undefined,
+        jersey_number: player?.jersey_number ?? null,
+      }))
+        .filter((player: SquadPlayer) => Number.isInteger(player.id) && player.name.length > 0)
     : [];
 
   const getPlayerNameById = (userId: number | null | undefined) => {
     if (!userId) return '';
 
-    const fromMeta = squadPlayerMeta.find((player: any) => Number(player?.id) === Number(userId));
+    const fromMeta = squadPlayerMeta.find((player) => Number(player.id) === Number(userId));
     if (fromMeta?.name) {
       return String(fromMeta.name);
     }
