@@ -9,6 +9,13 @@ interface User {
   role: string;
   profile_picture?: string;
   phone_number?: string;
+  height_cm?: number;
+  weight_kg?: number;
+  clothing_size?: string;
+  shoe_size?: string;
+  jersey_number?: number;
+  footedness?: string;
+  position?: string;
 }
 
 interface AuthState {
