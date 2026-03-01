@@ -15,7 +15,7 @@ export default function EventDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined'>('accepted');
+  const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
   const [comment, setComment] = useState('');
   const [responseValidationMessage, setResponseValidationMessage] = useState('');
   const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
@@ -75,10 +75,19 @@ export default function EventDetailPage() {
   const isTrainer = user?.role === 'trainer';
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
   const canViewResponses = isTrainer || isVisibilityAll;
+  const canChooseTentative = (() => {
+    if (!event?.rsvp_deadline) return true;
+    const deadlineDate = new Date(event.rsvp_deadline);
+    if (Number.isNaN(deadlineDate.getTime())) return true;
+    const tentativeCutoff = new Date(deadlineDate.getTime() - 60 * 60 * 1000);
+    return new Date() < tentativeCutoff;
+  })();
 
   useEffect(() => {
     if (myResponse?.status === 'declined') {
       setSelectedStatus('declined');
+    } else if (myResponse?.status === 'tentative') {
+      setSelectedStatus('tentative');
     } else {
       setSelectedStatus('accepted');
     }
@@ -90,7 +99,12 @@ export default function EventDetailPage() {
     }
   }, [myResponse?.status, myResponse?.comment]);
 
-  const saveOwnResponse = (status: 'accepted' | 'declined', nextComment: string) => {
+  const saveOwnResponse = (status: 'accepted' | 'declined' | 'tentative', nextComment: string) => {
+    if (status === 'tentative' && !canChooseTentative) {
+      setResponseValidationMessage('Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.');
+      return;
+    }
+
     if (status === 'declined' && !nextComment.trim()) {
       setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
       return;
@@ -132,6 +146,10 @@ export default function EventDetailPage() {
         return `${base} ${isActive ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'}`;
       }
 
+      if (status === 'tentative') {
+        return `${base} ${isActive ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'}`;
+      }
+
       if (status === 'declined') {
         return `${base} ${isActive ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50'}`;
       }
@@ -151,6 +169,18 @@ export default function EventDetailPage() {
         >
           ✓
         </button>
+        {canChooseTentative && (
+          <button
+            type="button"
+            onClick={() => handleTrainerStatusChangeFromModule(userId, 'tentative')}
+            disabled={updatePlayerResponseMutation.isPending}
+            className={getActionClass('tentative')}
+            title="Vielleicht"
+            aria-label="Vielleicht"
+          >
+            ?
+          </button>
+        )}
         <button
           type="button"
           onClick={() => handleTrainerStatusChangeFromModule(userId, 'declined')}
@@ -410,6 +440,21 @@ export default function EventDetailPage() {
                 <button
                   type="button"
                   onClick={() => {
+                    setSelectedStatus('tentative');
+                    saveOwnResponse('tentative', comment);
+                  }}
+                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                    selectedStatus === 'tentative'
+                      ? 'bg-yellow-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:hover:bg-gray-500'
+                  }`}
+                  disabled={!canChooseTentative}
+                >
+                  ? Unsicher
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     setSelectedStatus('declined');
                     saveOwnResponse('declined', comment);
                   }}
@@ -440,6 +485,11 @@ export default function EventDetailPage() {
                   rows={2}
                   placeholder="z.B. Komme später..."
                 />
+                {!canChooseTentative && (
+                  <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                    Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich.
+                  </p>
+                )}
               </div>
 
               {responseValidationMessage && (

@@ -8,6 +8,27 @@ const router = Router();
 
 router.use(authenticate);
 
+router.use((_req, _res, next) => {
+  try {
+    db.prepare(`
+      UPDATE event_responses
+      SET status = 'declined',
+          responded_at = CURRENT_TIMESTAMP
+      WHERE status = 'tentative'
+        AND event_id IN (
+          SELECT id
+          FROM events
+          WHERE rsvp_deadline IS NOT NULL
+            AND rsvp_deadline <= ?
+        )
+    `).run(new Date().toISOString());
+  } catch (error) {
+    console.error('Auto-convert tentative responses error:', error);
+  }
+
+  next();
+});
+
 // Helper function to generate recurring event dates
 function generateRecurringDates(
   startTime: Date,
@@ -616,7 +637,7 @@ router.post('/:id/response', (req: AuthRequest, res) => {
     const eventId = parseInt(req.params.id);
     const { status, comment }: UpdateEventResponseDTO = req.body;
     const normalizedStatus = String(status || '').trim().toLowerCase();
-    const allowedStatuses = new Set(['accepted', 'declined', 'pending']);
+    const allowedStatuses = new Set(['accepted', 'declined', 'tentative', 'pending']);
     const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
 
     if (!normalizedStatus) {
@@ -632,10 +653,20 @@ router.post('/:id/response', (req: AuthRequest, res) => {
     }
 
     // Check if event exists and user is member
-    const event = db.prepare('SELECT team_id FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT team_id, rsvp_deadline FROM events WHERE id = ?').get(eventId) as any;
     
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
+    }
+
+    if (normalizedStatus === 'tentative' && event.rsvp_deadline) {
+      const deadlineDate = new Date(event.rsvp_deadline);
+      if (!Number.isNaN(deadlineDate.getTime())) {
+        const tentativeCutoff = new Date(deadlineDate.getTime() - 60 * 60 * 1000);
+        if (new Date() >= tentativeCutoff) {
+          return res.status(400).json({ error: 'Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich' });
+        }
+      }
     }
 
     const membership = db.prepare(
@@ -677,7 +708,7 @@ router.post('/:id/response/:userId', (req: AuthRequest, res) => {
     const userId = parseInt(req.params.userId);
     const { status, comment }: UpdateEventResponseDTO = req.body;
     const normalizedStatus = String(status || '').trim().toLowerCase();
-    const allowedStatuses = new Set(['accepted', 'declined', 'pending']);
+    const allowedStatuses = new Set(['accepted', 'declined', 'tentative', 'pending']);
     const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
 
     if (!normalizedStatus) {
@@ -693,10 +724,20 @@ router.post('/:id/response/:userId', (req: AuthRequest, res) => {
     }
 
     // Check if event exists
-    const event = db.prepare('SELECT team_id FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT team_id, rsvp_deadline FROM events WHERE id = ?').get(eventId) as any;
     
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
+    }
+
+    if (normalizedStatus === 'tentative' && event.rsvp_deadline) {
+      const deadlineDate = new Date(event.rsvp_deadline);
+      if (!Number.isNaN(deadlineDate.getTime())) {
+        const tentativeCutoff = new Date(deadlineDate.getTime() - 60 * 60 * 1000);
+        if (new Date() >= tentativeCutoff) {
+          return res.status(400).json({ error: 'Unsicher ist nur bis 1 Stunde vor Rückmeldefrist möglich' });
+        }
+      }
     }
 
     // Check if user is trainer in this team

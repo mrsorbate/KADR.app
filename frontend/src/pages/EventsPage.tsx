@@ -17,8 +17,8 @@ export default function EventsPage() {
   const createdSuccess = searchParams.get('created') === '1';
 
   const updateResponseMutation = useMutation({
-    mutationFn: (data: { eventId: number; status: string }) =>
-      eventsAPI.updateResponse(data.eventId, { status: data.status }),
+    mutationFn: (data: { eventId: number; status: string; comment?: string }) =>
+      eventsAPI.updateResponse(data.eventId, { status: data.status, comment: data.comment }),
     onSuccess: () => {
       if (teamId) {
         queryClient.invalidateQueries({ queryKey: ['events', teamId] });
@@ -116,6 +116,13 @@ export default function EventsPage() {
           const opponent = getOpponentName();
           const displayTitle = String(opponent || event.title || '').replace(/^spiel\s+gegen\s+/i, '').trim();
           const startDate = new Date(event.start_time);
+          const canChooseTentative = (() => {
+            if (!event?.rsvp_deadline) return true;
+            const deadlineDate = new Date(event.rsvp_deadline);
+            if (Number.isNaN(deadlineDate.getTime())) return true;
+            const tentativeCutoff = new Date(deadlineDate.getTime() - 60 * 60 * 1000);
+            return new Date() < tentativeCutoff;
+          })();
           const weekdayLabel = startDate.toLocaleDateString('de-DE', { weekday: 'short' });
           const dayLabel = String(startDate.getDate()).padStart(2, '0');
           const monthLabel = String(startDate.getMonth() + 1).padStart(2, '0');
@@ -264,6 +271,21 @@ export default function EventsPage() {
                         >
                           <Check className="w-4 h-4" />
                         </button>
+                        {canChooseTentative && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateResponseMutation.mutate({ eventId: event.id, status: 'tentative' });
+                              setOpenQuickActionsEventId(null);
+                            }}
+                            disabled={updateResponseMutation.isPending}
+                            className={getActionButtonClass('tentative')}
+                            title="Unsicher"
+                            aria-label="Unsicher"
+                          >
+                            <HelpCircle className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
