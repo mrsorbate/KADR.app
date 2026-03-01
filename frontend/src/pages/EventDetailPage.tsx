@@ -223,19 +223,24 @@ export default function EventDetailPage() {
 
     return (
       <div className="card">
-        <h3 className={`font-semibold mb-3 flex items-center ${toneClass}`}>
-          <span className="mr-2">{icon}</span>
-          {title} ({count})
+        <h3 className={`font-semibold text-base sm:text-lg mb-3 flex items-center justify-between ${toneClass}`}>
+          <span className="flex items-center">
+            <span className="mr-2">{icon}</span>
+            {title}
+          </span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+            {count}
+          </span>
         </h3>
         <div className="space-y-2">
           {responses.map((response: any) => (
             <div
               key={response.id}
               onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
-              className="w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full flex items-center space-x-2 sm:space-x-3 text-sm rounded-lg px-2 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               {renderAvatar(response.user_name, response.user_profile_picture)}
-              <span className="text-gray-900 dark:text-white">{response.user_name}</span>
+              <span className="text-gray-900 dark:text-white font-medium truncate">{response.user_name}</span>
               {renderTrainerStatusActions(response.user_id, currentStatus)}
             </div>
           ))}
@@ -245,7 +250,7 @@ export default function EventDetailPage() {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
         <button
           onClick={() => navigate(-1)}
@@ -276,37 +281,37 @@ export default function EventDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Event Details */}
         <div className="lg:col-span-2 space-y-6">
           <div className="card">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Details</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Datum</p>
-                <p className="font-medium text-gray-900 dark:text-white">{eventDateLabel}</p>
+            <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Termindetails</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Datum</p>
+                <p className="mt-1 font-semibold text-gray-900 dark:text-white">{eventDateLabel}</p>
               </div>
 
-              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Uhrzeit</p>
-                <p className="font-medium text-gray-900 dark:text-white">{eventTimeRangeLabel}</p>
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Uhrzeit</p>
+                <p className="mt-1 font-semibold text-gray-900 dark:text-white">{eventTimeRangeLabel}</p>
               </div>
 
               {locationLabel && (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Ort</p>
-                  <p className="font-medium text-gray-900 dark:text-white break-words">{locationLabel}</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Ort</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-white break-words">{locationLabel}</p>
                 </div>
               )}
 
               {hasMeetingInfo && (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Treffpunkt</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Treffpunkt</p>
                   {event?.meeting_point && (
-                    <p className="font-medium text-gray-900 dark:text-white break-words">{event.meeting_point}</p>
+                    <p className="mt-1 font-semibold text-gray-900 dark:text-white break-words">{event.meeting_point}</p>
                   )}
                   {event?.arrival_minutes !== null && event?.arrival_minutes !== undefined && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">
                       {event.arrival_minutes} Minuten vor Beginn
                     </p>
                   )}
@@ -314,39 +319,39 @@ export default function EventDetailPage() {
               )}
 
               {event?.type === 'match' && event?.is_home_match !== undefined && (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Spielart</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Spielart</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">{event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}</p>
                 </div>
               )}
 
               {event?.duration_minutes && (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Dauer</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{event.duration_minutes} Minuten</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Dauer</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">{event.duration_minutes} Minuten</p>
                 </div>
               )}
 
               {event?.pitch_type && (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Platzart</p>
-                  <p className="font-medium text-gray-900 dark:text-white">{event.pitch_type}</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Platzart</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">{event.pitch_type}</p>
                 </div>
               )}
 
               {event?.rsvp_deadline && (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Rückmeldefrist</p>
-                  <p className="font-medium text-gray-900 dark:text-white">
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Rückmeldefrist</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">
                     {format(new Date(event.rsvp_deadline), 'PPPp', { locale: de })}
                   </p>
                 </div>
               )}
 
               {event?.description && (
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Beschreibung</p>
-                  <p className="text-gray-700 dark:text-gray-300 break-words">{event.description}</p>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Beschreibung</p>
+                  <p className="text-gray-700 dark:text-gray-300 break-words mt-1">{event.description}</p>
                 </div>
               )}
             </div>
