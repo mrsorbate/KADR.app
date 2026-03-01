@@ -584,17 +584,6 @@ export default function EventEditPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rueckmeldefrist</label>
-              <input
-                type="datetime-local"
-                value={eventData.rsvp_deadline}
-                onChange={(e) => setEventData({ ...eventData, rsvp_deadline: e.target.value })}
-                title="Rueckmeldefrist"
-                className="input mt-1"
-              />
-            </div>
-
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beschreibung</label>
               <textarea
@@ -605,37 +594,53 @@ export default function EventEditPage() {
               />
             </div>
 
-            <div className="md:col-span-2 space-y-3">
-              {membersForEdit?.length ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Spieler</label>
-                  <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={openInviteSelectionModal}
-                    className="btn btn-secondary"
-                  >
-                    Spieler auswählen
-                  </button>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {eventData.invite_all
-                      ? `Alle ${allMemberIds.length} Teammitglieder eingeladen`
-                      : `${eventData.invited_user_ids.length} von ${allMemberIds.length} eingeladen`}
-                  </span>
-                </div>
-                </div>
-              ) : null}
+            <div className="md:col-span-2 border-t pt-4">
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4 space-y-4">
+                <h4 className="font-medium text-gray-900 dark:text-white">Einstellungen</h4>
 
-              <label className="flex items-center space-x-3">
-                <input
-                  id="visibility_all"
-                  type="checkbox"
-                  checked={eventData.visibility_all}
-                  onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
-                  className="h-4 w-4 text-primary-600"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Teilnehmerliste für alle sichtbar</span>
-              </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist</label>
+                  <input
+                    type="datetime-local"
+                    value={eventData.rsvp_deadline}
+                    onChange={(e) => setEventData({ ...eventData, rsvp_deadline: e.target.value })}
+                    title="Rückmeldefrist"
+                    aria-label="Rückmeldefrist"
+                    className="input mt-1"
+                  />
+                </div>
+
+                {membersForEdit?.length ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Spieler</label>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={openInviteSelectionModal}
+                        className="btn btn-secondary"
+                      >
+                        Spieler auswählen
+                      </button>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {eventData.invite_all
+                          ? `Alle ${allMemberIds.length} Teammitglieder eingeladen`
+                          : `${eventData.invited_user_ids.length} von ${allMemberIds.length} eingeladen`}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+
+                <label className="flex items-center space-x-3">
+                  <input
+                    id="visibility_all"
+                    type="checkbox"
+                    checked={eventData.visibility_all}
+                    onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
+                    className="h-4 w-4 text-primary-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Teilnehmerliste für alle sichtbar</span>
+                </label>
+              </div>
             </div>
           </div>
 
