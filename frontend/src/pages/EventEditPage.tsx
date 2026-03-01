@@ -442,11 +442,11 @@ export default function EventEditPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dauer (Minuten) *</label>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-1 flex items-center gap-2 min-w-0">
                 <button
                   type="button"
                   onClick={() => stepDurationMinutes(-5)}
-                  className="btn btn-secondary px-3"
+                  className="btn btn-secondary w-12 px-0 shrink-0"
                   aria-label="Dauer verringern"
                 >
                   −
@@ -460,12 +460,12 @@ export default function EventEditPage() {
                   onChange={(e) => setEventData({ ...eventData, duration_minutes: e.target.value })}
                   onWheel={(e) => handleMinutesWheel(e, 'duration_minutes')}
                   title="Dauer in Minuten"
-                  className="input text-center"
+                  className="input text-center flex-1 min-w-0"
                 />
                 <button
                   type="button"
                   onClick={() => stepDurationMinutes(5)}
-                  className="btn btn-secondary px-3"
+                  className="btn btn-secondary w-12 px-0 shrink-0"
                   aria-label="Dauer erhöhen"
                 >
                   +
@@ -558,11 +558,11 @@ export default function EventEditPage() {
                   Minuten auf Team-Default
                 </button>
               </div>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="mt-1 flex items-center gap-2 min-w-0">
                 <button
                   type="button"
                   onClick={() => stepArrivalMinutes(-5)}
-                  className="btn btn-secondary px-3"
+                  className="btn btn-secondary w-12 px-0 shrink-0"
                   aria-label="Ankunftsminuten verringern"
                 >
                   −
@@ -575,12 +575,12 @@ export default function EventEditPage() {
                   onChange={(e) => setEventData({ ...eventData, arrival_minutes: e.target.value })}
                   onWheel={(e) => handleMinutesWheel(e, 'arrival_minutes')}
                   title="Treffen vor Beginn in Minuten"
-                  className="input text-center"
+                  className="input text-center flex-1 min-w-0"
                 />
                 <button
                   type="button"
                   onClick={() => stepArrivalMinutes(5)}
-                  className="btn btn-secondary px-3"
+                  className="btn btn-secondary w-12 px-0 shrink-0"
                   aria-label="Ankunftsminuten erhöhen"
                 >
                   +
