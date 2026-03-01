@@ -98,6 +98,76 @@ export default function EventEditPage() {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
+  const formatLocalDateTime = (date: Date): string => {
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const applyRsvpDeadlineOffsetHours = (hoursBefore: number) => {
+    if (!eventData.start_time) {
+      return;
+    }
+
+    const startDate = new Date(eventData.start_time);
+    if (Number.isNaN(startDate.getTime())) {
+      return;
+    }
+
+    const normalizedHours = Math.max(0, Math.min(168, Math.round(hoursBefore)));
+    const deadlineDate = new Date(startDate.getTime() - normalizedHours * 60 * 60 * 1000);
+    setEventData((prev) => ({ ...prev, rsvp_deadline: formatLocalDateTime(deadlineDate) }));
+  };
+
+  const getCurrentRsvpDeadlineOffsetHours = (): string => {
+    if (!eventData.start_time || !eventData.rsvp_deadline) {
+      return '';
+    }
+
+    const startDate = new Date(eventData.start_time);
+    const deadlineDate = new Date(eventData.rsvp_deadline);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(deadlineDate.getTime())) {
+      return '';
+    }
+
+    const diffMs = startDate.getTime() - deadlineDate.getTime();
+    if (diffMs < 0) {
+      return '0';
+    }
+
+    const diffHours = Math.round(diffMs / (60 * 60 * 1000));
+    return String(Math.min(168, Math.max(0, diffHours)));
+  };
+
+  const getCategoryDefaultRsvpHours = (
+    settings: any,
+    type: 'training' | 'match' | 'other'
+  ): number | null => {
+    const parseHours = (value: unknown): number | null => {
+      if (value === null || value === undefined || String(value).trim() === '') {
+        return null;
+      }
+      const parsed = parseInt(String(value), 10);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 168) {
+        return null;
+      }
+      return parsed;
+    };
+
+    const typeValue =
+      type === 'training'
+        ? settings?.default_rsvp_deadline_hours_training
+        : type === 'match'
+          ? settings?.default_rsvp_deadline_hours_match
+          : settings?.default_rsvp_deadline_hours_other;
+
+    const fromType = parseHours(typeValue);
+    if (fromType !== null) {
+      return fromType;
+    }
+
+    return parseHours(settings?.default_rsvp_deadline_hours);
+  };
+
   const getCategoryDefaultArrivalMinutes = (
     settings: any,
     type: 'training' | 'match' | 'other'
@@ -289,6 +359,27 @@ export default function EventEditPage() {
       pitch_type: prev.pitch_type || String(defaultHomeVenue?.pitch_type || ''),
     }));
   }, [defaultHomeVenue, eventData.type, event?.is_home_match, eventData.location_venue, eventData.location_street, eventData.location_zip_city]);
+
+  useEffect(() => {
+    if (!eventData.start_time || eventData.rsvp_deadline) {
+      return;
+    }
+
+    const defaultHours = getCategoryDefaultRsvpHours(teamSettings, eventData.type);
+    if (defaultHours === null) {
+      return;
+    }
+
+    applyRsvpDeadlineOffsetHours(defaultHours);
+  }, [
+    eventData.start_time,
+    eventData.rsvp_deadline,
+    eventData.type,
+    teamSettings?.default_rsvp_deadline_hours,
+    teamSettings?.default_rsvp_deadline_hours_training,
+    teamSettings?.default_rsvp_deadline_hours_match,
+    teamSettings?.default_rsvp_deadline_hours_other,
+  ]);
 
   const updateEventMutation = useMutation({
     mutationFn: (data: any) => eventsAPI.update(eventId, data),
@@ -621,15 +712,44 @@ export default function EventEditPage() {
                 </label>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist</label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist (Stunden vor Termin)</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultHours = getCategoryDefaultRsvpHours(teamSettings, eventData.type);
+                        if (defaultHours !== null) {
+                          applyRsvpDeadlineOffsetHours(defaultHours);
+                        }
+                      }}
+                      className="text-xs text-primary-600 hover:text-primary-500"
+                    >
+                      Team-Default
+                    </button>
+                  </div>
                   <input
-                    type="datetime-local"
-                    value={eventData.rsvp_deadline}
-                    onChange={(e) => setEventData({ ...eventData, rsvp_deadline: e.target.value })}
-                    title="Rückmeldefrist"
-                    aria-label="Rückmeldefrist"
+                    type="number"
+                    min={0}
+                    max={168}
+                    step={1}
+                    value={getCurrentRsvpDeadlineOffsetHours()}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (!Number.isFinite(value)) {
+                        setEventData((prev) => ({ ...prev, rsvp_deadline: '' }));
+                        return;
+                      }
+                      applyRsvpDeadlineOffsetHours(value);
+                    }}
+                    title="Stunden vor Termin"
+                    aria-label="Rückmeldefrist in Stunden vor Termin"
+                    disabled={!eventData.start_time}
                     className="input mt-1"
+                    placeholder="z.B. 24"
                   />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Frist endet am: {eventData.rsvp_deadline ? eventData.rsvp_deadline.replace('T', ' ') : '—'}
+                  </p>
                 </div>
 
                 {membersForEdit?.length ? (

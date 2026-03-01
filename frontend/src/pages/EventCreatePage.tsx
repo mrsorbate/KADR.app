@@ -82,6 +82,46 @@ export default function EventCreatePage() {
     });
   };
 
+  const formatLocalDateTime = (date: Date) => {
+    const pad = (value: number) => value.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const applyRsvpDeadlineOffsetHours = (hoursBefore: number) => {
+    if (!eventData.start_time) {
+      return;
+    }
+
+    const startDate = new Date(eventData.start_time);
+    if (Number.isNaN(startDate.getTime())) {
+      return;
+    }
+
+    const normalizedHours = Math.max(0, Math.min(168, Math.round(hoursBefore)));
+    const deadlineDate = new Date(startDate.getTime() - normalizedHours * 60 * 60 * 1000);
+    setEventData((prev) => ({ ...prev, rsvp_deadline: formatLocalDateTime(deadlineDate) }));
+  };
+
+  const getCurrentRsvpDeadlineOffsetHours = (): string => {
+    if (!eventData.start_time || !eventData.rsvp_deadline) {
+      return '';
+    }
+
+    const startDate = new Date(eventData.start_time);
+    const deadlineDate = new Date(eventData.rsvp_deadline);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(deadlineDate.getTime())) {
+      return '';
+    }
+
+    const diffMs = startDate.getTime() - deadlineDate.getTime();
+    if (diffMs < 0) {
+      return '0';
+    }
+
+    const diffHours = Math.round(diffMs / (60 * 60 * 1000));
+    return String(Math.min(168, Math.max(0, diffHours)));
+  };
+
   const handleMinutesWheel = (event: React.WheelEvent<HTMLInputElement>, field: 'duration_minutes' | 'arrival_minutes') => {
     event.preventDefault();
     const delta = event.deltaY < 0 ? 5 : -5;
@@ -262,11 +302,7 @@ export default function EventCreatePage() {
       return;
     }
 
-    const deadlineDate = new Date(startDate.getTime() - deadlineHours * 60 * 60 * 1000);
-    const pad = (value: number) => value.toString().padStart(2, '0');
-    const formatted = `${deadlineDate.getFullYear()}-${pad(deadlineDate.getMonth() + 1)}-${pad(deadlineDate.getDate())}T${pad(deadlineDate.getHours())}:${pad(deadlineDate.getMinutes())}`;
-
-    setEventData((prev) => ({ ...prev, rsvp_deadline: formatted }));
+    applyRsvpDeadlineOffsetHours(deadlineHours);
   }, [
     eventData.start_time,
     eventData.rsvp_deadline,
@@ -751,15 +787,44 @@ export default function EventCreatePage() {
                 </label>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist</label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist (Stunden vor Termin)</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultHours = getCategoryDefaultRsvpHours(teamSettings, eventData.type);
+                        if (defaultHours !== null) {
+                          applyRsvpDeadlineOffsetHours(defaultHours);
+                        }
+                      }}
+                      className="text-xs text-primary-600 hover:text-primary-500"
+                    >
+                      Team-Default
+                    </button>
+                  </div>
                   <input
-                    type="datetime-local"
-                    value={eventData.rsvp_deadline}
-                    onChange={(e) => setEventData({ ...eventData, rsvp_deadline: e.target.value })}
-                    title="Rückmeldefrist auswählen"
-                    aria-label="Rückmeldefrist auswählen"
+                    type="number"
+                    min={0}
+                    max={168}
+                    step={1}
+                    value={getCurrentRsvpDeadlineOffsetHours()}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (!Number.isFinite(value)) {
+                        setEventData((prev) => ({ ...prev, rsvp_deadline: '' }));
+                        return;
+                      }
+                      applyRsvpDeadlineOffsetHours(value);
+                    }}
+                    title="Stunden vor Termin"
+                    aria-label="Rückmeldefrist in Stunden vor Termin"
+                    disabled={!eventData.start_time}
                     className="input mt-1"
+                    placeholder="z.B. 24"
                   />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Frist endet am: {eventData.rsvp_deadline ? eventData.rsvp_deadline.replace('T', ' ') : '—'}
+                  </p>
                 </div>
               </div>
           </div>
