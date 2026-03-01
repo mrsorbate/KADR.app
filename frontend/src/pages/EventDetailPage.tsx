@@ -287,11 +287,27 @@ export default function EventDetailPage() {
     }
   };
 
+  const normalizeLocationValue = (value: unknown): string => {
+    const normalized = String(value ?? '').trim();
+    if (!normalized) return '';
+    const lowered = normalized.toLowerCase();
+    if (lowered === 'null' || lowered === 'undefined' || lowered === '-') return '';
+    return normalized;
+  };
+
   const eventDateLabel = safeFormatDate(event?.start_time, 'PPP');
   const eventTimeRangeLabel = `${safeFormatDate(event?.start_time, 'p')} - ${safeFormatDate(event?.end_time, 'p')}`;
-  const locationLabel = ([event?.location_venue, event?.location_street, event?.location_zip_city]
-    .filter(Boolean)
-    .join(', ') || event?.location || '').trim();
+  const locationParts = [
+    normalizeLocationValue(event?.location_venue),
+    normalizeLocationValue(event?.location_street),
+    normalizeLocationValue(event?.location_zip_city),
+  ].filter(Boolean);
+  const fallbackLocation = normalizeLocationValue(event?.location);
+  if (fallbackLocation && !locationParts.includes(fallbackLocation)) {
+    locationParts.push(fallbackLocation);
+  }
+  const locationLabel = locationParts.join(', ');
+  const shouldShowAddressBlock = event?.type === 'match' || locationParts.length > 0;
   const hasMeetingInfo = (event?.meeting_point && String(event.meeting_point).trim().length > 0)
     || (event?.arrival_minutes !== null && event?.arrival_minutes !== undefined);
 
@@ -409,10 +425,14 @@ export default function EventDetailPage() {
                 <p className="mt-1 font-semibold text-gray-900 dark:text-white">{eventTimeRangeLabel}</p>
               </div>
 
-              {locationLabel && (
+              {shouldShowAddressBlock && (
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
                   <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Ort</p>
-                  <p className="mt-1 font-semibold text-gray-900 dark:text-white break-words">{locationLabel}</p>
+                  {locationLabel ? (
+                    <p className="mt-1 font-semibold text-gray-900 dark:text-white break-words">{locationLabel}</p>
+                  ) : (
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Keine Adresse hinterlegt</p>
+                  )}
                 </div>
               )}
 
