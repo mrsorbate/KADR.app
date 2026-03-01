@@ -506,7 +506,7 @@ export default function EventCreatePage() {
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beginn *</label>
               <input
                 type="datetime-local"
@@ -515,7 +515,7 @@ export default function EventCreatePage() {
                 onChange={(e) => setEventData({ ...eventData, start_time: e.target.value })}
                 title="Beginn auswählen"
                 aria-label="Beginn auswählen"
-                className="input mt-1"
+                className="input mt-1 w-full min-w-0"
               />
             </div>
 

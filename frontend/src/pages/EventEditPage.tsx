@@ -423,7 +423,7 @@ export default function EventEditPage() {
               />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beginn *</label>
               <input
                 type="datetime-local"
@@ -431,7 +431,7 @@ export default function EventEditPage() {
                 value={eventData.start_time}
                 onChange={(e) => setEventData({ ...eventData, start_time: e.target.value })}
                 title="Beginn"
-                className="input mt-1"
+                className="input mt-1 w-full min-w-0"
               />
             </div>
 
