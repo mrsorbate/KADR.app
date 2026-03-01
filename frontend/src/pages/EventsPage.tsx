@@ -99,6 +99,9 @@ export default function EventsPage() {
           const locationText = ([event.location_venue, event.location_street, event.location_zip_city]
             .filter(Boolean)
             .join(', ') || event.location || '').trim();
+          const encodedLocationQuery = locationText ? encodeURIComponent(locationText) : '';
+          const googleMapsUrl = encodedLocationQuery ? `https://www.google.com/maps/search/?api=1&query=${encodedLocationQuery}` : '';
+          const appleMapsUrl = encodedLocationQuery ? `https://maps.apple.com/?q=${encodedLocationQuery}` : '';
 
           // Extract opponent name from title
           const getOpponentName = () => {
@@ -215,9 +218,39 @@ export default function EventsPage() {
                   </div>
 
                   {locationText && (
-                    <div className="mt-1.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                    <div
+                      className="mt-1.5 flex items-center gap-1.5 text-xs sm:text-sm text-gray-600 dark:text-gray-300"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <span className="truncate">{locationText}</span>
+                      <div className="min-w-0">
+                        <a
+                          href={googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="truncate underline decoration-dotted underline-offset-2 hover:text-primary-600 dark:hover:text-primary-400 block"
+                        >
+                          {locationText}
+                        </a>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <a
+                            href={googleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-primary-600 hover:text-primary-500"
+                          >
+                            Google Maps
+                          </a>
+                          <a
+                            href={appleMapsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-primary-600 hover:text-primary-500"
+                          >
+                            Apple Karten
+                          </a>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
