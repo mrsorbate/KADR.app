@@ -82,11 +82,6 @@ export default function EventCreatePage() {
     });
   };
 
-  const formatLocalDateTime = (date: Date) => {
-    const pad = (value: number) => value.toString().padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  };
-
   const handleMinutesWheel = (event: React.WheelEvent<HTMLInputElement>, field: 'duration_minutes' | 'arrival_minutes') => {
     event.preventDefault();
     const delta = event.deltaY < 0 ? 5 : -5;
