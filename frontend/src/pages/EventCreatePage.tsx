@@ -562,15 +562,15 @@ export default function EventCreatePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstätte</label>
-              {eventData.type === 'match' && homeVenues.length > 0 && (
+              {(eventData.type === 'match' || eventData.type === 'training') && homeVenues.length > 0 && (
                 <select
                   defaultValue=""
                   onChange={(e) => applyHomeVenueByIndex(e.target.value)}
                   className="input mt-1"
-                  title="Heimspiel-Platz auswählen"
-                  aria-label="Heimspiel-Platz auswählen"
+                  title="Vordefinierten Platz auswählen"
+                  aria-label="Vordefinierten Platz auswählen"
                 >
-                  <option value="">Heimspiel-Platz auswählen</option>
+                  <option value="">Vordefinierten Platz auswählen</option>
                   {homeVenues.map((venue: any, index: number) => (
                     <option key={`${venue.name}-${index}`} value={index}>
                       {venue.name}
