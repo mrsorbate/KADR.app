@@ -771,19 +771,19 @@ export default function EventCreatePage() {
               <div className="space-y-4">
                 {membersForCreate?.length ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Spieler</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Teammitglieder</label>
                     <div className="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
                         onClick={openInviteSelectionModal}
                         className="btn btn-secondary"
                       >
-                        Spieler auswählen
+                        Teammitglieder auswählen
                       </button>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
                         {eventData.invite_all
                           ? `Alle ${allMemberIds.length} Teammitglieder eingeladen`
-                          : `${eventData.invited_user_ids.length} von ${allMemberIds.length} eingeladen`}
+                          : `${eventData.invited_user_ids.length} von ${allMemberIds.length} Teammitgliedern eingeladen`}
                       </span>
                     </div>
                   </div>
@@ -818,29 +818,63 @@ export default function EventCreatePage() {
                       Team-Default
                     </button>
                   </div>
-                  <input
-                    type="number"
-                    min={0}
-                    max={168}
-                    step={1}
-                    value={getCurrentRsvpDeadlineOffsetHours()}
-                    onChange={(e) => {
-                      setRsvpDeadlineOffsetHours(e.target.value);
-                      const value = parseInt(e.target.value, 10);
-                      if (!Number.isFinite(value)) {
-                        setEventData((prev) => ({ ...prev, rsvp_deadline: '' }));
-                        return;
-                      }
-                      if (!eventData.start_time) {
-                        return;
-                      }
-                      applyRsvpDeadlineOffsetHours(value);
-                    }}
-                    title="Stunden vor Termin"
-                    aria-label="Rückmeldefrist in Stunden vor Termin"
-                    className="input mt-1"
-                    placeholder="z.B. 24"
-                  />
+                  <div className="mt-1 flex items-center gap-2 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = parseInt(getCurrentRsvpDeadlineOffsetHours(), 10);
+                        const baseValue = Number.isFinite(current) ? current : 0;
+                        const nextValue = Math.max(0, Math.min(168, baseValue - 1));
+                        setRsvpDeadlineOffsetHours(String(nextValue));
+                        if (eventData.start_time) {
+                          applyRsvpDeadlineOffsetHours(nextValue);
+                        }
+                      }}
+                      className="btn btn-secondary w-12 px-0 shrink-0"
+                      aria-label="Rückmeldefrist Stunden verringern"
+                    >
+                      −
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      max={168}
+                      step={1}
+                      value={getCurrentRsvpDeadlineOffsetHours()}
+                      onChange={(e) => {
+                        setRsvpDeadlineOffsetHours(e.target.value);
+                        const value = parseInt(e.target.value, 10);
+                        if (!Number.isFinite(value)) {
+                          setEventData((prev) => ({ ...prev, rsvp_deadline: '' }));
+                          return;
+                        }
+                        if (!eventData.start_time) {
+                          return;
+                        }
+                        applyRsvpDeadlineOffsetHours(value);
+                      }}
+                      title="Stunden vor Termin"
+                      aria-label="Rückmeldefrist in Stunden vor Termin"
+                      className="input text-center flex-1 min-w-0"
+                      placeholder="z.B. 24"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = parseInt(getCurrentRsvpDeadlineOffsetHours(), 10);
+                        const baseValue = Number.isFinite(current) ? current : 0;
+                        const nextValue = Math.max(0, Math.min(168, baseValue + 1));
+                        setRsvpDeadlineOffsetHours(String(nextValue));
+                        if (eventData.start_time) {
+                          applyRsvpDeadlineOffsetHours(nextValue);
+                        }
+                      }}
+                      className="btn btn-secondary w-12 px-0 shrink-0"
+                      aria-label="Rückmeldefrist Stunden erhöhen"
+                    >
+                      +
+                    </button>
+                  </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Frist endet am: {eventData.rsvp_deadline ? eventData.rsvp_deadline.replace('T', ' ') : (eventData.start_time ? '—' : 'wird nach Wahl von Beginn berechnet')}
                   </p>
