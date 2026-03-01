@@ -122,7 +122,7 @@ export default function Layout({ organization }: LayoutProps) {
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">sqadX.app</span>
                   {(organizationLogo || organizationName !== 'Dein Verein') && (
                     <>
-                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                      <span className="hidden min-[390px]:inline text-gray-400 dark:text-gray-500">-</span>
                       {organizationLogo && (
                         <img 
                           src={resolveAssetUrl(organizationLogo)} 
@@ -131,7 +131,7 @@ export default function Layout({ organization }: LayoutProps) {
                         />
                       )}
                       {organizationName !== 'Dein Verein' && (
-                        <span className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight max-w-[95px] truncate whitespace-nowrap sm:max-w-[220px]">{organizationName}</span>
+                        <span className="hidden min-[390px]:block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight max-w-[95px] truncate whitespace-nowrap sm:max-w-[220px]">{organizationName}</span>
                       )}
                     </>
                   )}
