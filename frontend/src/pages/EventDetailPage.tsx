@@ -342,10 +342,17 @@ export default function EventDetailPage() {
             <div
               key={response.id}
               onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
-              className="w-full flex items-center space-x-2 sm:space-x-3 text-sm rounded-lg px-2 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full flex items-start space-x-2 sm:space-x-3 text-sm rounded-lg px-2 py-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               {renderAvatar(response.user_name, response.user_profile_picture)}
-              <span className="text-gray-900 dark:text-white font-medium truncate">{response.user_name}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-gray-900 dark:text-white font-medium truncate">{response.user_name}</p>
+                {isTrainer && currentStatus === 'declined' && typeof response.comment === 'string' && response.comment.trim().length > 0 && (
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 break-words">
+                    Grund: {response.comment.trim()}
+                  </p>
+                )}
+              </div>
               {renderTrainerStatusActions(response.user_id, currentStatus)}
             </div>
           ))}
