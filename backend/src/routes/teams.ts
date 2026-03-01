@@ -733,9 +733,71 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
         ? null
         : new Date(gameDate.getTime() - defaultRsvpHours * 60 * 60 * 1000).toISOString();
 
-    const venue = pickFirstString(game?.location, game?.venue, game?.stadium, game?.place, game?.sportfield);
-    const street = pickFirstString(game?.street, game?.strasse, game?.address, game?.adresse, game?.location_street);
-    const zipCity = pickFirstString(game?.zip_city, game?.ort, game?.city, game?.location_zip_city, game?.postleitzahl_stadt);
+    const locationObjects = [game?.location, game?.venue, game?.address, game?.adresse, game?.place, game?.sportfield]
+      .filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === 'object');
+
+    const pickFromLocationObjects = (...keys: string[]): string | null => {
+      const values: unknown[] = [];
+      for (const obj of locationObjects) {
+        for (const key of keys) {
+          values.push(obj[key]);
+        }
+      }
+      return pickFirstString(...values);
+    };
+
+    const venue = pickFirstString(
+      game?.location_venue,
+      game?.venue_name,
+      game?.venueName,
+      game?.location_name,
+      game?.locationName,
+      game?.location,
+      game?.venue,
+      game?.stadium,
+      game?.place,
+      game?.sportfield,
+      pickFromLocationObjects('name', 'title', 'venue', 'venue_name', 'stadium', 'place', 'sportfield', 'sportstaette'),
+    );
+
+    const streetBase = pickFirstString(
+      game?.street,
+      game?.strasse,
+      game?.address,
+      game?.adresse,
+      game?.location_street,
+      pickFromLocationObjects('street', 'strasse', 'address', 'adresse', 'address1', 'line1'),
+    );
+    const houseNumber = pickFirstString(
+      game?.house_number,
+      game?.houseNumber,
+      pickFromLocationObjects('house_number', 'houseNumber', 'number', 'nr'),
+    );
+    const street = streetBase
+      ? (houseNumber && !streetBase.includes(houseNumber) ? `${streetBase} ${houseNumber}` : streetBase)
+      : null;
+
+    const zip = pickFirstString(
+      game?.zip,
+      game?.postal_code,
+      game?.postalCode,
+      game?.plz,
+      pickFromLocationObjects('zip', 'postal_code', 'postalCode', 'plz'),
+    );
+    const city = pickFirstString(
+      game?.city,
+      game?.ort,
+      game?.town,
+      pickFromLocationObjects('city', 'ort', 'town'),
+    );
+    const zipCity = pickFirstString(
+      game?.zip_city,
+      game?.zipCity,
+      game?.location_zip_city,
+      game?.postleitzahl_stadt,
+      game?.plz_ort,
+      pickFromLocationObjects('zip_city', 'zipCity', 'postleitzahl_stadt', 'plz_ort', 'plzOrt'),
+    ) || (zip || city ? `${zip ? `${zip} ` : ''}${city || ''}`.trim() : null);
     const description = pickFirstString(game?.competition, game?.competition_short, game?.league, game?.staffel) || null;
 
     const exists = existingEventByExternalIdStmt.get(externalGameId) as { id: number } | undefined;
