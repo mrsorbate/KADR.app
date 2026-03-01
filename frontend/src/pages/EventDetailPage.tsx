@@ -80,20 +80,80 @@ export default function EventDetailPage() {
   const isTrainer = user?.role === 'trainer';
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
   const canViewResponses = isTrainer || isVisibilityAll;
-  const trainerStatusOrder = ['pending', 'accepted', 'tentative', 'declined'] as const;
-
-  const getNextTrainerStatus = (status: string): string => {
-    const currentIndex = trainerStatusOrder.indexOf(status as (typeof trainerStatusOrder)[number]);
-    if (currentIndex === -1) return 'accepted';
-    return trainerStatusOrder[(currentIndex + 1) % trainerStatusOrder.length];
-  };
-
-  const handleTrainerStatusChangeFromModule = (userId: number, currentStatus: string) => {
+  const handleTrainerStatusChangeFromModule = (userId: number, targetStatus: string) => {
     if (!isTrainer || updatePlayerResponseMutation.isPending) return;
     updatePlayerResponseMutation.mutate({
       userId,
-      status: getNextTrainerStatus(currentStatus),
+      status: targetStatus,
     });
+  };
+
+  const renderTrainerStatusActions = (userId: number, currentStatus: string) => {
+    if (!isTrainer) return null;
+
+    const getActionClass = (status: string) => {
+      const isActive = currentStatus === status;
+      const base = 'w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-colors';
+
+      if (status === 'accepted') {
+        return `${base} ${isActive ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'}`;
+      }
+
+      if (status === 'tentative') {
+        return `${base} ${isActive ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'}`;
+      }
+
+      if (status === 'declined') {
+        return `${base} ${isActive ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50'}`;
+      }
+
+      return `${base} ${isActive ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`;
+    };
+
+    return (
+      <div className="ml-auto flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          onClick={() => handleTrainerStatusChangeFromModule(userId, 'accepted')}
+          disabled={updatePlayerResponseMutation.isPending}
+          className={getActionClass('accepted')}
+          title="Zugesagt"
+          aria-label="Zugesagt"
+        >
+          ✓
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTrainerStatusChangeFromModule(userId, 'tentative')}
+          disabled={updatePlayerResponseMutation.isPending}
+          className={getActionClass('tentative')}
+          title="Vielleicht"
+          aria-label="Vielleicht"
+        >
+          ?
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTrainerStatusChangeFromModule(userId, 'declined')}
+          disabled={updatePlayerResponseMutation.isPending}
+          className={getActionClass('declined')}
+          title="Abgesagt"
+          aria-label="Abgesagt"
+        >
+          ✗
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTrainerStatusChangeFromModule(userId, 'pending')}
+          disabled={updatePlayerResponseMutation.isPending}
+          className={getActionClass('pending')}
+          title="Keine Rückmeldung"
+          aria-label="Keine Rückmeldung"
+        >
+          ⏳
+        </button>
+      </div>
+    );
   };
 
   const getOpponentName = () => {
@@ -380,21 +440,11 @@ export default function EventDetailPage() {
                 </h3>
                 <div className="space-y-2">
                   {acceptedResponses.map((response: any) => (
-                    <button
-                      key={response.id}
-                      type="button"
-                      onClick={() => handleTrainerStatusChangeFromModule(response.user_id, 'accepted')}
-                      disabled={!isTrainer || updatePlayerResponseMutation.isPending}
-                      className={`w-full text-left flex items-center space-x-2 text-sm rounded-md px-1 py-1 ${
-                        isTrainer
-                          ? 'hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors cursor-pointer'
-                          : 'cursor-default'
-                      }`}
-                      title={isTrainer ? 'Status wechseln' : undefined}
-                    >
+                    <div key={response.id} className="w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
                       {renderAvatar(response.user_name, response.user_profile_picture)}
                       <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                    </button>
+                      {renderTrainerStatusActions(response.user_id, 'accepted')}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -407,20 +457,11 @@ export default function EventDetailPage() {
                 <div className="space-y-2">
                   {declinedResponses.map((response: any) => (
                     <div key={response.id} className="text-sm">
-                      <button
-                        type="button"
-                        onClick={() => handleTrainerStatusChangeFromModule(response.user_id, 'declined')}
-                        disabled={!isTrainer || updatePlayerResponseMutation.isPending}
-                        className={`w-full text-left flex items-center space-x-2 rounded-md px-1 py-1 ${
-                          isTrainer
-                            ? 'hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer'
-                            : 'cursor-default'
-                        }`}
-                        title={isTrainer ? 'Status wechseln' : undefined}
-                      >
+                      <div className="w-full flex items-center space-x-2 rounded-md px-1 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                         {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                      </button>
+                        {renderTrainerStatusActions(response.user_id, 'declined')}
+                      </div>
                       {response.comment && (
                         <p className="text-gray-600 dark:text-gray-300 text-xs mt-1 ml-6">{response.comment}</p>
                       )}
@@ -437,21 +478,11 @@ export default function EventDetailPage() {
                   </h3>
                   <div className="space-y-2">
                     {tentativeResponses.map((response: any) => (
-                      <button
-                        key={response.id}
-                        type="button"
-                        onClick={() => handleTrainerStatusChangeFromModule(response.user_id, 'tentative')}
-                        disabled={!isTrainer || updatePlayerResponseMutation.isPending}
-                        className={`w-full text-left flex items-center space-x-2 text-sm rounded-md px-1 py-1 ${
-                          isTrainer
-                            ? 'hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors cursor-pointer'
-                            : 'cursor-default'
-                        }`}
-                        title={isTrainer ? 'Status wechseln' : undefined}
-                      >
+                      <div key={response.id} className="w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors">
                         {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                      </button>
+                        {renderTrainerStatusActions(response.user_id, 'tentative')}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -465,21 +496,11 @@ export default function EventDetailPage() {
                   </h3>
                   <div className="space-y-2">
                     {pendingResponses.map((response: any) => (
-                      <button
-                        key={response.id}
-                        type="button"
-                        onClick={() => handleTrainerStatusChangeFromModule(response.user_id, 'pending')}
-                        disabled={!isTrainer || updatePlayerResponseMutation.isPending}
-                        className={`w-full text-left flex items-center space-x-2 text-sm rounded-md px-1 py-1 ${
-                          isTrainer
-                            ? 'hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer'
-                            : 'cursor-default'
-                        }`}
-                        title={isTrainer ? 'Status wechseln' : undefined}
-                      >
+                      <div key={response.id} className="w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                         {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                      </button>
+                        {renderTrainerStatusActions(response.user_id, 'pending')}
+                      </div>
                     ))}
                   </div>
                 </div>
