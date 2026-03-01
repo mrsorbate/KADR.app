@@ -17,6 +17,7 @@ export default function EventDetailPage() {
 
   const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
   const [comment, setComment] = useState('');
+  const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
@@ -43,6 +44,7 @@ export default function EventDetailPage() {
       eventsAPI.updatePlayerResponse(eventId, data.userId, { status: data.status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      setExpandedResponseUserId(null);
     },
   });
 
@@ -89,7 +91,7 @@ export default function EventDetailPage() {
   };
 
   const renderTrainerStatusActions = (userId: number, currentStatus: string) => {
-    if (!isTrainer) return null;
+    if (!isTrainer || expandedResponseUserId !== userId) return null;
 
     const getActionClass = (status: string) => {
       const isActive = currentStatus === status;
@@ -440,7 +442,15 @@ export default function EventDetailPage() {
                 </h3>
                 <div className="space-y-2">
                   {acceptedResponses.map((response: any) => (
-                    <div key={response.id} className="w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
+                    <div
+                      key={response.id}
+                      onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
+                      className={`w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 transition-colors ${
+                        isTrainer
+                          ? 'hover:bg-green-50 dark:hover:bg-green-900/20 cursor-pointer'
+                          : ''
+                      }`}
+                    >
                       {renderAvatar(response.user_name, response.user_profile_picture)}
                       <span className="text-gray-900 dark:text-white">{response.user_name}</span>
                       {renderTrainerStatusActions(response.user_id, 'accepted')}
@@ -457,7 +467,14 @@ export default function EventDetailPage() {
                 <div className="space-y-2">
                   {declinedResponses.map((response: any) => (
                     <div key={response.id} className="text-sm">
-                      <div className="w-full flex items-center space-x-2 rounded-md px-1 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                      <div
+                        onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
+                        className={`w-full flex items-center space-x-2 rounded-md px-1 py-1 transition-colors ${
+                          isTrainer
+                            ? 'hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer'
+                            : ''
+                        }`}
+                      >
                         {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
                         {renderTrainerStatusActions(response.user_id, 'declined')}
@@ -478,7 +495,15 @@ export default function EventDetailPage() {
                   </h3>
                   <div className="space-y-2">
                     {tentativeResponses.map((response: any) => (
-                      <div key={response.id} className="w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors">
+                      <div
+                        key={response.id}
+                        onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
+                        className={`w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 transition-colors ${
+                          isTrainer
+                            ? 'hover:bg-yellow-50 dark:hover:bg-yellow-900/20 cursor-pointer'
+                            : ''
+                        }`}
+                      >
                         {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
                         {renderTrainerStatusActions(response.user_id, 'tentative')}
@@ -496,7 +521,15 @@ export default function EventDetailPage() {
                   </h3>
                   <div className="space-y-2">
                     {pendingResponses.map((response: any) => (
-                      <div key={response.id} className="w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                      <div
+                        key={response.id}
+                        onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
+                        className={`w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 transition-colors ${
+                          isTrainer
+                            ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
+                            : ''
+                        }`}
+                      >
                         {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
                         {renderTrainerStatusActions(response.user_id, 'pending')}
