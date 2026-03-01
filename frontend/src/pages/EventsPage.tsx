@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { eventsAPI } from '../lib/api';
+import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { Calendar, Plus, ArrowLeft, MapPin, Check, X, HelpCircle, Home, Plane, Cone, Swords } from 'lucide-react';
 
@@ -56,6 +56,21 @@ export default function EventsPage() {
       }
     },
   });
+
+  const { data: teamSettings } = useQuery({
+    queryKey: ['team-settings-calendar', teamId],
+    queryFn: async () => {
+      if (!teamId) {
+        return null;
+      }
+      const response = await teamsAPI.getSettings(teamId);
+      return response.data;
+    },
+    enabled: Boolean(teamId),
+    retry: 1,
+  });
+
+  const calendarSubscribeUrl = String(teamSettings?.calendar_webcal_url || teamSettings?.calendar_feed_url || '').trim();
 
   const eventItems = Array.isArray(events) ? events : [];
 
@@ -374,6 +389,16 @@ export default function EventsPage() {
             <Plus className="w-5 h-5" />
             <span>Termin erstellen</span>
           </Link>
+        )}
+
+        {teamId && calendarSubscribeUrl && (
+          <a
+            href={calendarSubscribeUrl}
+            className="btn btn-secondary w-full sm:w-auto flex items-center justify-center space-x-2"
+          >
+            <Calendar className="w-5 h-5" />
+            <span>Kalender abonnieren</span>
+          </a>
         )}
       </div>
 
