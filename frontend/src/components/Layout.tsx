@@ -103,6 +103,12 @@ export default function Layout({ organization }: LayoutProps) {
 
   const teamsMenuLabel = teams?.length === 1 ? 'Mein Team' : 'Meine Teams';
   const menuProfilePicture = profile?.profile_picture || user?.profile_picture;
+  const roleLabel = user?.role === 'admin' ? 'Admin' : user?.role === 'trainer' ? 'Trainer' : 'Spieler';
+  const roleBadgeClass = user?.role === 'admin'
+    ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+    : user?.role === 'trainer'
+      ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+      : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -179,9 +185,14 @@ export default function Layout({ organization }: LayoutProps) {
                     </div>
                   </Link>
                 )}
-                <Link to="/settings" className="font-medium truncate max-w-[110px] hover:underline">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Link to="/settings" className="font-medium truncate max-w-[90px] hover:underline">
                     {firstName}
-                </Link>
+                  </Link>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${roleBadgeClass}`}>
+                    {roleLabel}
+                  </span>
+                </div>
               </div>
               <div className="hidden md:flex items-center space-x-3 px-2">
                 {menuProfilePicture ? (
@@ -203,7 +214,9 @@ export default function Layout({ organization }: LayoutProps) {
                   <Link to="/settings" className="font-medium hover:underline">
                     {firstName}
                   </Link>
-                  {user?.role === 'admin' && <span className="ml-2 text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-full">Admin</span>}
+                  <span className={`ml-2 text-xs px-2 py-1 rounded-full ${roleBadgeClass}`}>
+                    {roleLabel}
+                  </span>
                 </span>
               </div>
               <button
