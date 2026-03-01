@@ -362,7 +362,9 @@ export default function EventEditPage() {
 
       <div className="card">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card border border-gray-200 dark:border-gray-700">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Termin</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Kategorie *</label>
               <div className="mt-1 grid grid-cols-3 gap-2" role="group" aria-label="Kategorie auswählen">
@@ -476,7 +478,12 @@ export default function EventEditPage() {
                 </button>
               </div>
             </div>
+            </div>
+          </div>
 
+          <div className="card border border-gray-200 dark:border-gray-700">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Ort & Organisation</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstaette</label>
               {eventData.type === 'match' && event?.is_home_match !== 0 && homeVenues.length > 0 && (
@@ -593,9 +600,11 @@ export default function EventEditPage() {
                 className="input mt-1 min-h-[90px]"
               />
             </div>
+            </div>
+          </div>
 
-            <div className="md:col-span-2 border-t pt-4">
-              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4 space-y-4">
+          <div className="card border border-gray-200 dark:border-gray-700">
+              <div className="space-y-4">
                 <h4 className="font-medium text-gray-900 dark:text-white">Einstellungen</h4>
 
                 <div>
@@ -641,7 +650,6 @@ export default function EventEditPage() {
                   <span className="text-sm text-gray-700 dark:text-gray-300">Teilnehmerliste für alle sichtbar</span>
                 </label>
               </div>
-            </div>
           </div>
 
           <div className="flex justify-end gap-2">

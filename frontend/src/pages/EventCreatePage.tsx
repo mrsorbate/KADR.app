@@ -434,7 +434,9 @@ export default function EventCreatePage() {
 
       <div className="card">
         <form onSubmit={handleCreateEvent} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card border border-gray-200 dark:border-gray-700">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Termin</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {!initialTeamId && teamsForCreate?.length === 1 && (
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Team</label>
@@ -552,7 +554,12 @@ export default function EventCreatePage() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ende: {eventData.end_time.replace('T', ' ')}</p>
               )}
             </div>
+            </div>
+          </div>
 
+          <div className="card border border-gray-200 dark:border-gray-700">
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Ort & Organisation</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstätte</label>
               {eventData.type === 'match' && homeVenues.length > 0 && (
@@ -703,6 +710,7 @@ export default function EventCreatePage() {
                 rows={3}
                 placeholder="Optionale Details..."
               />
+            </div>
             </div>
           </div>
 
