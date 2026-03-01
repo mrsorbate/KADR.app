@@ -520,6 +520,9 @@ export default function EventCreatePage() {
                 aria-label="Beginn auswählen"
                 className="input mt-1 w-full min-w-0"
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {eventData.start_time ? `Gewählt: ${eventData.start_time.replace('T', ' ')}` : 'Datum und Uhrzeit auswählen'}
+              </p>
             </div>
 
             <div>
