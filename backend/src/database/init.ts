@@ -163,7 +163,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
   CREATE INDEX IF NOT EXISTS idx_events_team ON events(team_id);
   CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
-  CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_calendar_token ON teams(calendar_token);
   CREATE INDEX IF NOT EXISTS idx_event_responses_event ON event_responses(event_id);
   CREATE INDEX IF NOT EXISTS idx_event_responses_user ON event_responses(user_id);
   CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
