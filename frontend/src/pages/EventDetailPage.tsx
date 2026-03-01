@@ -98,6 +98,14 @@ export default function EventDetailPage() {
     return trainerStatusOrder[(currentIndex + 1) % trainerStatusOrder.length];
   };
 
+  const handleTrainerStatusChangeFromModule = (userId: number, currentStatus: string) => {
+    if (!isTrainer || updatePlayerResponseMutation.isPending) return;
+    updatePlayerResponseMutation.mutate({
+      userId,
+      status: getNextTrainerStatus(currentStatus),
+    });
+  };
+
   const getOpponentName = () => {
     if (!event?.title) return '';
     const parts = event.title.split(' - ');
@@ -449,10 +457,21 @@ export default function EventDetailPage() {
                 </h3>
                 <div className="space-y-2">
                   {acceptedResponses.map((response: any) => (
-                    <div key={response.id} className="flex items-center space-x-2 text-sm">
-                        {renderAvatar(response.user_name, response.user_profile_picture)}
+                    <button
+                      key={response.id}
+                      type="button"
+                      onClick={() => handleTrainerStatusChangeFromModule(response.user_id, 'accepted')}
+                      disabled={!isTrainer || updatePlayerResponseMutation.isPending}
+                      className={`w-full text-left flex items-center space-x-2 text-sm rounded-md px-1 py-1 ${
+                        isTrainer
+                          ? 'hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors cursor-pointer'
+                          : 'cursor-default'
+                      }`}
+                      title={isTrainer ? 'Status wechseln' : undefined}
+                    >
+                      {renderAvatar(response.user_name, response.user_profile_picture)}
                       <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -465,10 +484,20 @@ export default function EventDetailPage() {
                 <div className="space-y-2">
                   {declinedResponses.map((response: any) => (
                     <div key={response.id} className="text-sm">
-                      <div className="flex items-center space-x-2">
-                          {renderAvatar(response.user_name, response.user_profile_picture)}
+                      <button
+                        type="button"
+                        onClick={() => handleTrainerStatusChangeFromModule(response.user_id, 'declined')}
+                        disabled={!isTrainer || updatePlayerResponseMutation.isPending}
+                        className={`w-full text-left flex items-center space-x-2 rounded-md px-1 py-1 ${
+                          isTrainer
+                            ? 'hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer'
+                            : 'cursor-default'
+                        }`}
+                        title={isTrainer ? 'Status wechseln' : undefined}
+                      >
+                        {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                      </div>
+                      </button>
                       {response.comment && (
                         <p className="text-gray-600 dark:text-gray-300 text-xs mt-1 ml-6">{response.comment}</p>
                       )}
@@ -485,10 +514,21 @@ export default function EventDetailPage() {
                   </h3>
                   <div className="space-y-2">
                     {tentativeResponses.map((response: any) => (
-                      <div key={response.id} className="flex items-center space-x-2 text-sm">
+                      <button
+                        key={response.id}
+                        type="button"
+                        onClick={() => handleTrainerStatusChangeFromModule(response.user_id, 'tentative')}
+                        disabled={!isTrainer || updatePlayerResponseMutation.isPending}
+                        className={`w-full text-left flex items-center space-x-2 text-sm rounded-md px-1 py-1 ${
+                          isTrainer
+                            ? 'hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors cursor-pointer'
+                            : 'cursor-default'
+                        }`}
+                        title={isTrainer ? 'Status wechseln' : undefined}
+                      >
                         {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -502,10 +542,21 @@ export default function EventDetailPage() {
                   </h3>
                   <div className="space-y-2">
                     {pendingResponses.map((response: any) => (
-                      <div key={response.id} className="flex items-center space-x-2 text-sm">
+                      <button
+                        key={response.id}
+                        type="button"
+                        onClick={() => handleTrainerStatusChangeFromModule(response.user_id, 'pending')}
+                        disabled={!isTrainer || updatePlayerResponseMutation.isPending}
+                        className={`w-full text-left flex items-center space-x-2 text-sm rounded-md px-1 py-1 ${
+                          isTrainer
+                            ? 'hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer'
+                            : 'cursor-default'
+                        }`}
+                        title={isTrainer ? 'Status wechseln' : undefined}
+                      >
                         {renderAvatar(response.user_name, response.user_profile_picture)}
                         <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
