@@ -62,10 +62,6 @@ export default function EventDetailPage() {
     setDeleteModalOpen(false);
   };
 
-  if (isLoading) {
-    return <div className="text-center py-12 text-gray-600 dark:text-gray-300">Lädt...</div>;
-  }
-
   const myResponse = event?.responses?.find((r: any) => r.user_id === user?.id);
   const acceptedResponses = event?.responses?.filter((r: any) => r.status === 'accepted') || [];
   const declinedResponses = event?.responses?.filter((r: any) => r.status === 'declined') || [];
@@ -295,6 +291,10 @@ export default function EventDetailPage() {
       </div>
     );
   };
+
+  if (isLoading) {
+    return <div className="text-center py-12 text-gray-600 dark:text-gray-300">Lädt...</div>;
+  }
 
   return (
     <div className="space-y-5 sm:space-y-6">
