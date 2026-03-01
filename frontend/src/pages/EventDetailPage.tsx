@@ -314,6 +314,7 @@ export default function EventDetailPage() {
   const isMatchWithoutAddress = event?.type === 'match' && locationParts.length === 0;
   const hasMeetingInfo = (event?.meeting_point && String(event.meeting_point).trim().length > 0)
     || (event?.arrival_minutes !== null && event?.arrival_minutes !== undefined);
+  const backTarget = event?.team_id ? `/teams/${event.team_id}/events` : '/events';
   const hasSettingsModule = Boolean(event?.rsvp_deadline) || event?.visibility_all !== undefined || event?.invite_all !== undefined;
 
   const repeatType = String((event as any)?.repeat_type || 'none');
@@ -399,7 +400,7 @@ export default function EventDetailPage() {
       <div className="space-y-4 sm:space-y-6">
         <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/events')}
             className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             aria-label="Zurück"
             title="Zurück"
@@ -421,14 +422,14 @@ export default function EventDetailPage() {
   return (
     <div className="space-y-5 sm:space-y-6">
       <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
-        <button
-          onClick={() => navigate(-1)}
+        <Link
+          to={backTarget}
           className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           aria-label="Zurück"
           title="Zurück"
         >
           <ArrowLeft className="w-6 h-6" />
-        </button>
+        </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-center space-x-2 sm:space-x-3">
             {event?.type === 'match' && opponentCrestUrl ? (
