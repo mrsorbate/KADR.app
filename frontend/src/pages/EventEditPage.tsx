@@ -482,16 +482,16 @@ export default function EventEditPage() {
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstaette</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstätte</label>
               {(eventData.type === 'match' || eventData.type === 'training') && homeVenues.length > 0 && (
                 <select
                   defaultValue=""
                   onChange={(e) => applyHomeVenueByIndex(e.target.value)}
                   className="input mt-1"
-                  title="Vordefinierten Platz auswählen"
-                  aria-label="Vordefinierten Platz auswählen"
+                  title="Ort oder Spielstätte auswählen"
+                  aria-label="Ort oder Spielstätte auswählen"
                 >
-                  <option value="">Vordefinierten Platz auswählen</option>
+                  <option value="">Ort oder Spielstätte auswählen</option>
                   {homeVenues.map((venue: any, index: number) => (
                     <option key={`${venue.name}-${index}`} value={index}>
                       {venue.name}
@@ -503,7 +503,7 @@ export default function EventEditPage() {
                 type="text"
                 value={eventData.location_venue}
                 onChange={(e) => setEventData({ ...eventData, location_venue: e.target.value })}
-                title="Ort oder Spielstaette"
+                title="Ort oder Spielstätte"
                 className="input mt-1"
               />
             </div>
@@ -607,6 +607,17 @@ export default function EventEditPage() {
                   Einstellungen
                 </h4>
 
+                <label className="flex items-center space-x-3">
+                  <input
+                    id="visibility_all"
+                    type="checkbox"
+                    checked={eventData.visibility_all}
+                    onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
+                    className="h-4 w-4 text-primary-600"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Teilnehmerliste für alle sichtbar</span>
+                </label>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist</label>
                   <input
@@ -638,17 +649,6 @@ export default function EventEditPage() {
                     </div>
                   </div>
                 ) : null}
-
-                <label className="flex items-center space-x-3">
-                  <input
-                    id="visibility_all"
-                    type="checkbox"
-                    checked={eventData.visibility_all}
-                    onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
-                    className="h-4 w-4 text-primary-600"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Teilnehmerliste für alle sichtbar</span>
-                </label>
               </div>
           </div>
 
