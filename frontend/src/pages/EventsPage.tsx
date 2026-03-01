@@ -267,20 +267,11 @@ export default function EventsPage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateResponseMutation.mutate({ eventId: event.id, status: 'tentative' });
-                            setOpenQuickActionsEventId(null);
-                          }}
-                          disabled={updateResponseMutation.isPending}
-                          className={getActionButtonClass('tentative')}
-                          title="Unsicher"
-                          aria-label="Unsicher"
-                        >
-                          <HelpCircle className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateResponseMutation.mutate({ eventId: event.id, status: 'declined' });
+                            const declineReason = window.prompt('Bitte Grund für die Absage eingeben:')?.trim() || '';
+                            if (!declineReason) {
+                              return;
+                            }
+                            updateResponseMutation.mutate({ eventId: event.id, status: 'declined', comment: declineReason });
                             setOpenQuickActionsEventId(null);
                           }}
                           disabled={updateResponseMutation.isPending}

@@ -15,7 +15,7 @@ export default function EventDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
+  const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined'>('accepted');
   const [comment, setComment] = useState('');
   const [responseValidationMessage, setResponseValidationMessage] = useState('');
   const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
@@ -77,8 +77,10 @@ export default function EventDetailPage() {
   const canViewResponses = isTrainer || isVisibilityAll;
 
   useEffect(() => {
-    if (myResponse?.status === 'accepted' || myResponse?.status === 'declined' || myResponse?.status === 'tentative') {
-      setSelectedStatus(myResponse.status);
+    if (myResponse?.status === 'declined') {
+      setSelectedStatus('declined');
+    } else {
+      setSelectedStatus('accepted');
     }
 
     if (typeof myResponse?.comment === 'string') {
@@ -88,7 +90,7 @@ export default function EventDetailPage() {
     }
   }, [myResponse?.status, myResponse?.comment]);
 
-  const saveOwnResponse = (status: 'accepted' | 'declined' | 'tentative', nextComment: string) => {
+  const saveOwnResponse = (status: 'accepted' | 'declined', nextComment: string) => {
     if (status === 'declined' && !nextComment.trim()) {
       setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
       return;
@@ -130,10 +132,6 @@ export default function EventDetailPage() {
         return `${base} ${isActive ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50'}`;
       }
 
-      if (status === 'tentative') {
-        return `${base} ${isActive ? 'bg-yellow-600 text-white' : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'}`;
-      }
-
       if (status === 'declined') {
         return `${base} ${isActive ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50'}`;
       }
@@ -152,16 +150,6 @@ export default function EventDetailPage() {
           aria-label="Zugesagt"
         >
           ✓
-        </button>
-        <button
-          type="button"
-          onClick={() => handleTrainerStatusChangeFromModule(userId, 'tentative')}
-          disabled={updatePlayerResponseMutation.isPending}
-          className={getActionClass('tentative')}
-          title="Vielleicht"
-          aria-label="Vielleicht"
-        >
-          ?
         </button>
         <button
           type="button"
@@ -422,24 +410,10 @@ export default function EventDetailPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSelectedStatus('tentative');
-                    saveOwnResponse('tentative', comment);
-                  }}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
-                    selectedStatus === 'tentative'
-                      ? 'bg-yellow-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:hover:bg-gray-500'
-                  }`}
-                >
-                  ? Vielleicht
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
                     setSelectedStatus('declined');
                     saveOwnResponse('declined', comment);
                   }}
-                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors sm:col-span-1 ${
                     selectedStatus === 'declined'
                       ? 'bg-red-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200 dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500 dark:hover:bg-gray-500'
@@ -451,7 +425,7 @@ export default function EventDetailPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Kommentar (optional)
+                  Kommentar {selectedStatus === 'declined' ? '(Pflicht bei Absage)' : '(optional)'}
                 </label>
                 <textarea
                   value={comment}

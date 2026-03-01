@@ -616,7 +616,7 @@ router.post('/:id/response', (req: AuthRequest, res) => {
     const eventId = parseInt(req.params.id);
     const { status, comment }: UpdateEventResponseDTO = req.body;
     const normalizedStatus = String(status || '').trim().toLowerCase();
-    const allowedStatuses = new Set(['accepted', 'declined', 'tentative', 'pending']);
+    const allowedStatuses = new Set(['accepted', 'declined', 'pending']);
     const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
 
     if (!normalizedStatus) {
@@ -677,7 +677,7 @@ router.post('/:id/response/:userId', (req: AuthRequest, res) => {
     const userId = parseInt(req.params.userId);
     const { status, comment }: UpdateEventResponseDTO = req.body;
     const normalizedStatus = String(status || '').trim().toLowerCase();
-    const allowedStatuses = new Set(['accepted', 'declined', 'tentative', 'pending']);
+    const allowedStatuses = new Set(['accepted', 'declined', 'pending']);
     const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
 
     if (!normalizedStatus) {
