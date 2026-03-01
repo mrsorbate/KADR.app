@@ -163,20 +163,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
   CREATE INDEX IF NOT EXISTS idx_event_responses_event ON event_responses(event_id);
   CREATE INDEX IF NOT EXISTS idx_event_responses_user ON event_responses(user_id);
-  CREATE TRIGGER IF NOT EXISTS trg_event_responses_declined_comment_insert
-  BEFORE INSERT ON event_responses
-  FOR EACH ROW
-  WHEN NEW.status = 'declined' AND LENGTH(TRIM(COALESCE(NEW.comment, ''))) = 0
-  BEGIN
-    SELECT RAISE(ABORT, 'Decline reason is required');
-  END;
-  CREATE TRIGGER IF NOT EXISTS trg_event_responses_declined_comment_update
-  BEFORE UPDATE OF status, comment ON event_responses
-  FOR EACH ROW
-  WHEN NEW.status = 'declined' AND LENGTH(TRIM(COALESCE(NEW.comment, ''))) = 0
-  BEGIN
-    SELECT RAISE(ABORT, 'Decline reason is required');
-  END;
   CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
   CREATE INDEX IF NOT EXISTS idx_team_invites_team ON team_invites(team_id);
   CREATE INDEX IF NOT EXISTS idx_trainer_invites_token ON trainer_invites(token);
@@ -299,6 +285,9 @@ try {
     db.exec('ALTER TABLE events ADD COLUMN series_id TEXT');
     console.log('✅ Added series_id column to events table');
   }
+
+  db.exec('DROP TRIGGER IF EXISTS trg_event_responses_declined_comment_insert');
+  db.exec('DROP TRIGGER IF EXISTS trg_event_responses_declined_comment_update');
   
   // Add rsvp_deadline to events
   const hasRsvpDeadline = eventColumns.some((col) => col.name === 'rsvp_deadline');

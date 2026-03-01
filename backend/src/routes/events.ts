@@ -928,10 +928,6 @@ router.post('/:id/response', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    if (normalizedStatus === 'declined' && !normalizedComment) {
-      return res.status(400).json({ error: 'Bitte gib einen Grund für die Absage an' });
-    }
-
     // Check if event exists and user is member
     const event = db.prepare('SELECT team_id, rsvp_deadline FROM events WHERE id = ?').get(eventId) as any;
     
@@ -951,10 +947,14 @@ router.post('/:id/response', (req: AuthRequest, res) => {
 
     const membership = db.prepare(
       'SELECT role FROM team_members WHERE team_id = ? AND user_id = ?'
-    ).get(event.team_id, req.user!.id);
+    ).get(event.team_id, req.user!.id) as { role: string } | undefined;
 
     if (!membership) {
       return res.status(403).json({ error: 'Not a team member' });
+    }
+
+    if (normalizedStatus === 'declined' && membership.role !== 'trainer' && !normalizedComment) {
+      return res.status(400).json({ error: 'Bitte gib einen Grund für die Absage an' });
     }
 
     // Update or create response
@@ -997,10 +997,6 @@ router.post('/:id/response/:userId', (req: AuthRequest, res) => {
 
     if (!allowedStatuses.has(normalizedStatus)) {
       return res.status(400).json({ error: 'Invalid status' });
-    }
-
-    if (normalizedStatus === 'declined' && !normalizedComment) {
-      return res.status(400).json({ error: 'Bitte gib einen Grund für die Absage an' });
     }
 
     // Check if event exists
