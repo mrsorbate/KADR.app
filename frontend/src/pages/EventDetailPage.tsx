@@ -22,7 +22,7 @@ export default function EventDetailPage() {
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
-  const { data: event, isLoading } = useQuery({
+  const { data: event, isLoading, isError } = useQuery({
     queryKey: ['event', eventId],
     queryFn: async () => {
       const response = await eventsAPI.getById(eventId);
@@ -294,6 +294,30 @@ export default function EventDetailPage() {
 
   if (isLoading) {
     return <div className="text-center py-12 text-gray-600 dark:text-gray-300">Lädt...</div>;
+  }
+
+  if (isError || !event) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            aria-label="Zurück"
+            title="Zurück"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Termin nicht verfügbar</h1>
+        </div>
+
+        <div className="card">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Dieser Termin konnte nicht geladen werden oder existiert nicht mehr.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
