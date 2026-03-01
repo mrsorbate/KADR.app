@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { ArrowLeft } from 'lucide-react';
+import { resolveAssetUrl } from '../lib/utils';
 
 export default function EventCreatePage() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +56,13 @@ export default function EventCreatePage() {
     { value: 'Halle', label: 'Halle' },
     { value: 'Sonstiges', label: 'Sonstiges' },
   ];
+
+  const getInitials = (name: string): string => {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase();
+  };
 
   const stepDurationMinutes = (delta: number) => {
     setEventData((prev) => {
@@ -746,37 +754,21 @@ export default function EventCreatePage() {
               <h4 className="font-medium text-gray-900 dark:text-white mb-3">Einstellungen</h4>
 
               <div className="space-y-4">
-                <label className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    checked={eventData.invite_all}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      if (checked) {
-                        setEventData({ ...eventData, invite_all: true, invited_user_ids: allMemberIds });
-                      } else {
-                        setEventData((prev) => ({ ...prev, invite_all: false }));
-                        openInviteSelectionModal();
-                      }
-                    }}
-                    className="h-4 w-4 text-primary-600"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Alle Teammitglieder einladen</span>
-                </label>
-
                 {membersForCreate?.length ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Einladungen</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Spieler</label>
                     <div className="flex flex-wrap items-center gap-3">
                       <button
                         type="button"
                         onClick={openInviteSelectionModal}
                         className="btn btn-secondary"
                       >
-                        {!eventData.invite_all ? 'Teilnehmer-Auswahl öffnen' : 'Nicht alle einladen'}
+                        Spieler auswählen
                       </button>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {eventData.invited_user_ids.length} von {allMemberIds.length} eingeladen
+                        {eventData.invite_all
+                          ? `Alle ${allMemberIds.length} Teammitglieder eingeladen`
+                          : `${eventData.invited_user_ids.length} von ${allMemberIds.length} eingeladen`}
                       </span>
                     </div>
                   </div>
@@ -975,22 +967,48 @@ export default function EventCreatePage() {
             <div className="overflow-y-auto pr-1 space-y-2">
               {membersForCreate.map((member: any) => {
                 const isChecked = eventData.invited_user_ids.includes(member.id);
+                const avatarUrl = resolveAssetUrl(member?.profile_picture);
                 return (
-                  <label key={member.id} className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={(e) => {
-                        const nextIds = e.target.checked
-                          ? [...eventData.invited_user_ids, member.id]
-                          : eventData.invited_user_ids.filter((value) => value !== member.id);
+                  <div key={member.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={`${member.name} Profilbild`}
+                          className="w-8 h-8 rounded-full object-cover border border-gray-200 dark:border-gray-700"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold flex items-center justify-center">
+                          {getInitials(member.name)}
+                        </div>
+                      )}
+                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{member.name}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextIds = isChecked
+                          ? eventData.invited_user_ids.filter((value) => value !== member.id)
+                          : [...eventData.invited_user_ids, member.id];
                         const inviteAll = nextIds.length === allMemberIds.length;
                         setEventData((prev) => ({ ...prev, invited_user_ids: nextIds, invite_all: inviteAll }));
                       }}
-                      className="h-4 w-4 text-primary-600"
-                    />
-                    <span>{member.name}</span>
-                  </label>
+                      className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                        isChecked
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      <span>{isChecked ? 'ON' : 'OFF'}</span>
+                      <span
+                        className={`w-3 h-3 rounded-full ${
+                          isChecked ? 'bg-white' : 'bg-gray-500 dark:bg-gray-300'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 );
               })}
             </div>
