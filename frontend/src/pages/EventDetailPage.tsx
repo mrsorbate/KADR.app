@@ -246,8 +246,19 @@ export default function EventDetailPage() {
     );
   };
 
-  const eventDateLabel = format(new Date(event?.start_time), 'PPP', { locale: de });
-  const eventTimeRangeLabel = `${format(new Date(event?.start_time), 'p', { locale: de })} - ${format(new Date(event?.end_time), 'p', { locale: de })}`;
+  const safeFormatDate = (value: unknown, pattern: string): string => {
+    if (!value) return '—';
+    const parsed = new Date(String(value));
+    if (Number.isNaN(parsed.getTime())) return '—';
+    try {
+      return format(parsed, pattern, { locale: de });
+    } catch {
+      return '—';
+    }
+  };
+
+  const eventDateLabel = safeFormatDate(event?.start_time, 'PPP');
+  const eventTimeRangeLabel = `${safeFormatDate(event?.start_time, 'p')} - ${safeFormatDate(event?.end_time, 'p')}`;
   const locationLabel = ([event?.location_venue, event?.location_street, event?.location_zip_city]
     .filter(Boolean)
     .join(', ') || event?.location || '').trim();
@@ -414,7 +425,7 @@ export default function EventDetailPage() {
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
                   <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Rückmeldefrist</p>
                   <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                    {format(new Date(event.rsvp_deadline), 'PPPp', { locale: de })}
+                    {safeFormatDate(event.rsvp_deadline, 'PPPp')}
                   </p>
                 </div>
               )}
