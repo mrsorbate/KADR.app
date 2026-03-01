@@ -242,6 +242,7 @@ export default function EventCreatePage() {
       location_venue: String(selectedVenue?.name || ''),
       location_street: String(selectedVenue?.street || ''),
       location_zip_city: String(selectedVenue?.zip_city || ''),
+      pitch_type: String(selectedVenue?.pitch_type || ''),
     }));
   };
 

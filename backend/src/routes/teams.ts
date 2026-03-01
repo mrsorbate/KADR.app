@@ -13,6 +13,7 @@ type HomeVenue = {
   name: string;
   street?: string;
   zip_city?: string;
+  pitch_type?: string;
 };
 
 const normalizeHomeVenues = (input: unknown): HomeVenue[] => {
@@ -31,8 +32,10 @@ const normalizeHomeVenues = (input: unknown): HomeVenue[] => {
       const street = String(source.street || '').trim();
       const zipCityRaw = source.zip_city ?? source.zipCity;
       const zip_city = String(zipCityRaw || '').trim();
+      const pitchTypeRaw = source.pitch_type ?? source.pitchType;
+      const pitch_type = String(pitchTypeRaw || '').trim();
 
-      if (!name && !street && !zip_city) {
+      if (!name && !street && !zip_city && !pitch_type) {
         return null;
       }
 
@@ -40,6 +43,7 @@ const normalizeHomeVenues = (input: unknown): HomeVenue[] => {
         name,
         street: street || undefined,
         zip_city: zip_city || undefined,
+        pitch_type: pitch_type || undefined,
       };
     })
     .filter(Boolean) as HomeVenue[];
@@ -51,6 +55,7 @@ const normalizeHomeVenues = (input: unknown): HomeVenue[] => {
       name: venue.name.slice(0, 120),
       street: venue.street?.slice(0, 200),
       zip_city: venue.zip_city?.slice(0, 120),
+      pitch_type: venue.pitch_type?.slice(0, 40),
     }));
 };
 
@@ -227,7 +232,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_arrival_minutes_training?: number | string | null;
       default_arrival_minutes_match?: number | string | null;
       default_arrival_minutes_other?: number | string | null;
-      home_venues?: Array<{ name: string; street?: string; zip_city?: string }>;
+      home_venues?: Array<{ name: string; street?: string; zip_city?: string; pitch_type?: string }>;
     };
 
     const membership = db.prepare(

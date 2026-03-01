@@ -83,7 +83,7 @@ export const teamsAPI = {
     default_arrival_minutes_training?: number | null;
     default_arrival_minutes_match?: number | null;
     default_arrival_minutes_other?: number | null;
-    home_venues?: Array<{ name: string; street?: string; zip_city?: string }>;
+    home_venues?: Array<{ name: string; street?: string; zip_city?: string; pitch_type?: string }>;
   }) => api.put(`/teams/${id}/settings`, data),
   
   addMember: (id: number, data: { user_id: number; role: string; jersey_number?: number; position?: string }) =>

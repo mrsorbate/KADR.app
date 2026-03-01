@@ -24,7 +24,14 @@ export default function TeamSettingsPage() {
   const [defaultRsvpDeadlineHoursOther, setDefaultRsvpDeadlineHoursOther] = useState('');
   const [defaultArrivalMinutesTraining, setDefaultArrivalMinutesTraining] = useState('');
   const [defaultArrivalMinutesMatch, setDefaultArrivalMinutesMatch] = useState('');
-  const [homeVenues, setHomeVenues] = useState<Array<{ name: string; street: string; zip_city: string }>>([]);
+  const [homeVenues, setHomeVenues] = useState<Array<{ name: string; street: string; zip_city: string; pitch_type: string }>>([]);
+
+  const pitchTypeOptions: Array<{ value: string; label: string }> = [
+    { value: 'Rasen', label: 'Rasen' },
+    { value: 'Kunstrasen', label: 'Kunstrasen' },
+    { value: 'Halle', label: 'Halle' },
+    { value: 'Sonstiges', label: 'Sonstiges' },
+  ];
 
   const { data: settings, isLoading, error } = useQuery({
     queryKey: ['team-settings', teamId],
@@ -89,6 +96,7 @@ export default function TeamSettingsPage() {
             name: String(venue?.name || ''),
             street: String(venue?.street || ''),
             zip_city: String(venue?.zip_city || ''),
+            pitch_type: String(venue?.pitch_type || ''),
           }))
         : []
     );
@@ -177,7 +185,7 @@ export default function TeamSettingsPage() {
 
   const updateHomeVenuesMutation = useMutation({
     mutationFn: (payload: {
-      home_venues: Array<{ name: string; street?: string; zip_city?: string }>;
+      home_venues: Array<{ name: string; street?: string; zip_city?: string; pitch_type?: string }>;
     }) => teamsAPI.updateSettings(teamId, payload),
     onSuccess: () => {
       invalidateSettingsQueries();
@@ -319,8 +327,9 @@ export default function TeamSettingsPage() {
         name: venue.name.trim(),
         street: venue.street.trim(),
         zip_city: venue.zip_city.trim(),
+        pitch_type: venue.pitch_type.trim(),
       }))
-      .filter((venue) => venue.name || venue.street || venue.zip_city);
+      .filter((venue) => venue.name || venue.street || venue.zip_city || venue.pitch_type);
 
     const invalidVenue = normalizedHomeVenues.find((venue) => !venue.name);
     if (invalidVenue) {
@@ -334,10 +343,10 @@ export default function TeamSettingsPage() {
   };
 
   const addHomeVenue = () => {
-    setHomeVenues((prev) => [...prev, { name: '', street: '', zip_city: '' }]);
+    setHomeVenues((prev) => [...prev, { name: '', street: '', zip_city: '', pitch_type: '' }]);
   };
 
-  const updateHomeVenue = (index: number, field: 'name' | 'street' | 'zip_city', value: string) => {
+  const updateHomeVenue = (index: number, field: 'name' | 'street' | 'zip_city' | 'pitch_type', value: string) => {
     setHomeVenues((prev) => prev.map((venue, i) => (i === index ? { ...venue, [field]: value } : venue)));
   };
 
@@ -858,7 +867,7 @@ export default function TeamSettingsPage() {
                 <div className="space-y-3">
                   {homeVenues.map((venue, index) => (
                     <div key={index} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                         <input
                           type="text"
                           value={venue.name}
@@ -880,6 +889,20 @@ export default function TeamSettingsPage() {
                           className="input"
                           placeholder="PLZ Ort"
                         />
+                        <select
+                          value={venue.pitch_type}
+                          onChange={(e) => updateHomeVenue(index, 'pitch_type', e.target.value)}
+                          className="input"
+                          title="Platzart"
+                          aria-label="Platzart"
+                        >
+                          <option value="">Platzart</option>
+                          {pitchTypeOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="flex justify-end">
                         <button
