@@ -139,6 +139,15 @@ export default function EventEditPage() {
     ? teamSettings.home_venues.filter((venue: any) => venue && typeof venue === 'object' && String(venue.name || '').trim())
     : [];
 
+  const defaultHomeVenue = (() => {
+    if (!homeVenues.length) return null;
+    const defaultHomeVenueName = String(teamSettings?.default_home_venue_name || '').trim();
+    if (!defaultHomeVenueName) {
+      return homeVenues[0];
+    }
+    return homeVenues.find((venue: any) => String(venue?.name || '').trim() === defaultHomeVenueName) || homeVenues[0];
+  })();
+
   const applyHomeVenueByIndex = (indexValue: string) => {
     const index = parseInt(indexValue, 10);
     if (!Number.isFinite(index) || index < 0 || index >= homeVenues.length) {
@@ -206,6 +215,35 @@ export default function EventEditPage() {
       setEventData((prev) => ({ ...prev, end_time: formatted }));
     }
   }, [eventData.start_time, eventData.duration_minutes, eventData.end_time]);
+
+  useEffect(() => {
+    if (!defaultHomeVenue) {
+      return;
+    }
+
+    const shouldUseDefaultVenue = eventData.type === 'training' || (eventData.type === 'match' && event?.is_home_match !== 0);
+    if (!shouldUseDefaultVenue) {
+      return;
+    }
+
+    const hasManualLocation = Boolean(
+      String(eventData.location_venue || '').trim()
+      || String(eventData.location_street || '').trim()
+      || String(eventData.location_zip_city || '').trim()
+    );
+
+    if (hasManualLocation) {
+      return;
+    }
+
+    setEventData((prev) => ({
+      ...prev,
+      location_venue: String(defaultHomeVenue?.name || ''),
+      location_street: String(defaultHomeVenue?.street || ''),
+      location_zip_city: String(defaultHomeVenue?.zip_city || ''),
+      pitch_type: prev.pitch_type || String(defaultHomeVenue?.pitch_type || ''),
+    }));
+  }, [defaultHomeVenue, eventData.type, event?.is_home_match, eventData.location_venue, eventData.location_street, eventData.location_zip_city]);
 
   const updateEventMutation = useMutation({
     mutationFn: (data: any) => eventsAPI.update(eventId, data),

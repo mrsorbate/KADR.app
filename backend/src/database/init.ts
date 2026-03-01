@@ -60,6 +60,7 @@ db.exec(`
     default_arrival_minutes_match INTEGER,
     default_arrival_minutes_other INTEGER,
     home_venues TEXT,
+    default_home_venue_name TEXT,
     created_by INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -393,6 +394,12 @@ try {
     db.exec('ALTER TABLE teams ADD COLUMN home_venues TEXT');
     db.exec("UPDATE teams SET home_venues = '[]' WHERE home_venues IS NULL");
     console.log('✅ Added home_venues column to teams table');
+  }
+
+  const hasDefaultHomeVenueName = teamColumns.some((col) => col.name === 'default_home_venue_name');
+  if (!hasDefaultHomeVenueName) {
+    db.exec('ALTER TABLE teams ADD COLUMN default_home_venue_name TEXT');
+    console.log('✅ Added default_home_venue_name column to teams table');
   }
 
   const hasFussballdeTeamName = teamColumns.some((col) => col.name === 'fussballde_team_name');

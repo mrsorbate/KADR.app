@@ -72,6 +72,19 @@ const parseHomeVenuesFromDb = (rawValue: unknown): HomeVenue[] => {
   }
 };
 
+const resolveDefaultHomeVenue = (venues: HomeVenue[], defaultName: unknown): HomeVenue | null => {
+  if (!venues.length) {
+    return null;
+  }
+
+  const normalizedDefaultName = String(defaultName || '').trim();
+  if (!normalizedDefaultName) {
+    return venues[0] || null;
+  }
+
+  return venues.find((venue) => venue.name === normalizedDefaultName) || venues[0] || null;
+};
+
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -172,7 +185,7 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
       `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
-              home_venues
+              home_venues, default_home_venue_name
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
 
@@ -183,6 +196,7 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
     return res.json({
       ...settings,
       home_venues: parseHomeVenuesFromDb(settings.home_venues),
+      default_home_venue_name: settings.default_home_venue_name || null,
     });
   } catch (error) {
     console.error('Get team settings error:', error);
@@ -206,6 +220,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     const hasDefaultArrivalMinutesMatch = Object.prototype.hasOwnProperty.call(req.body, 'default_arrival_minutes_match');
     const hasDefaultArrivalMinutesOther = Object.prototype.hasOwnProperty.call(req.body, 'default_arrival_minutes_other');
     const hasHomeVenues = Object.prototype.hasOwnProperty.call(req.body, 'home_venues');
+    const hasDefaultHomeVenueName = Object.prototype.hasOwnProperty.call(req.body, 'default_home_venue_name');
 
     const {
       fussballde_id,
@@ -220,6 +235,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_arrival_minutes_match,
       default_arrival_minutes_other,
       home_venues,
+      default_home_venue_name,
     } = req.body as {
       fussballde_id?: string;
       fussballde_team_name?: string;
@@ -233,6 +249,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_arrival_minutes_match?: number | string | null;
       default_arrival_minutes_other?: number | string | null;
       home_venues?: Array<{ name: string; street?: string; zip_city?: string; pitch_type?: string }>;
+      default_home_venue_name?: string | null;
     };
 
     const membership = db.prepare(
@@ -247,7 +264,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
             `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
-              home_venues
+              home_venues, default_home_venue_name
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
     if (!team) {
@@ -384,6 +401,20 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextHomeVenues = normalizeHomeVenues(home_venues);
     }
 
+    let nextDefaultHomeVenueName = String(team.default_home_venue_name || '').trim() || null;
+    if (hasDefaultHomeVenueName) {
+      const normalizedDefaultHomeVenueName = String(default_home_venue_name || '').trim();
+      nextDefaultHomeVenueName = normalizedDefaultHomeVenueName || null;
+    }
+
+    if (nextDefaultHomeVenueName && !nextHomeVenues.some((venue) => venue.name === nextDefaultHomeVenueName)) {
+      return res.status(400).json({ error: 'Standardplatz muss in der Platzliste vorhanden sein' });
+    }
+
+    if (!nextDefaultHomeVenueName && nextHomeVenues.length > 0) {
+      nextDefaultHomeVenueName = nextHomeVenues[0].name;
+    }
+
     db.prepare(
       `UPDATE teams
        SET fussballde_id = ?,
@@ -398,6 +429,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
              default_arrival_minutes_match = ?,
              default_arrival_minutes_other = ?,
            home_venues = ?,
+           default_home_venue_name = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     ).run(
@@ -413,6 +445,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultArrivalMinutesMatch,
       nextDefaultArrivalMinutesOther,
       JSON.stringify(nextHomeVenues),
+      nextDefaultHomeVenueName,
       teamId
     );
 
@@ -420,13 +453,14 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
-              home_venues
+              home_venues, default_home_venue_name
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
 
     return res.json({
       ...updatedSettings,
       home_venues: parseHomeVenuesFromDb(updatedSettings.home_venues),
+      default_home_venue_name: updatedSettings.default_home_venue_name || null,
     });
   } catch (error) {
     console.error('Update team settings error:', error);
@@ -447,8 +481,8 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
   };
 
   const team = db.prepare(
-    `SELECT id, name, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours, default_rsvp_deadline_hours_match,
-            default_arrival_minutes, default_arrival_minutes_match
+      `SELECT id, name, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours, default_rsvp_deadline_hours_match,
+        default_arrival_minutes, default_arrival_minutes_match, home_venues, default_home_venue_name
      FROM teams WHERE id = ?`
   ).get(teamId) as any;
 
@@ -539,6 +573,10 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
 
   const defaultRsvpHours = parseRsvpHours(team.default_rsvp_deadline_hours_match) ?? parseRsvpHours(team.default_rsvp_deadline_hours);
   const defaultArrivalMinutes = parseArrivalMinutes(team.default_arrival_minutes_match) ?? parseArrivalMinutes(team.default_arrival_minutes);
+  const defaultHomeVenue = resolveDefaultHomeVenue(
+    parseHomeVenuesFromDb(team.home_venues),
+    team.default_home_venue_name
+  );
 
   const parseGameDate = (game: any): Date | null => {
     const parseDateWithOptionalTime = (dateValue: string, timeValue?: string): Date | null => {
@@ -707,9 +745,11 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
   const insertResponseStmt = db.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
-  const existingEventByExternalIdStmt = db.prepare('SELECT id FROM events WHERE external_game_id = ? LIMIT 1');
+  const existingEventByExternalIdStmt = db.prepare(
+    'SELECT id, location, location_venue, location_street, location_zip_city FROM events WHERE external_game_id = ? LIMIT 1'
+  );
   const existingLegacyMatchStmt = db.prepare(
-    `SELECT id
+    `SELECT id, location, location_venue, location_street, location_zip_city
      FROM events
      WHERE team_id = ?
        AND type = 'match'
@@ -943,6 +983,10 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       game?.plz_ort,
       pickFromLocationObjects('zip_city', 'zipCity', 'postleitzahl_stadt', 'plz_ort', 'plzOrt'),
     ) || (zip || city ? `${zip ? `${zip} ` : ''}${city || ''}`.trim() : null);
+
+    const resolvedVenue = venue || (isHomeMatch && defaultHomeVenue?.name ? defaultHomeVenue.name : null);
+    const resolvedStreet = street || (isHomeMatch && defaultHomeVenue?.street ? defaultHomeVenue.street : null);
+    const resolvedZipCity = zipCity || (isHomeMatch && defaultHomeVenue?.zip_city ? defaultHomeVenue.zip_city : null);
     const description = pickFirstString(game?.competition, game?.competition_short, game?.league, game?.staffel) || null;
 
     importDebugLog('Resolved game address fields', {
@@ -967,19 +1011,49 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       },
     });
 
-    const exists = existingEventByExternalIdStmt.get(externalGameId) as { id: number } | undefined;
+    const exists = existingEventByExternalIdStmt.get(externalGameId) as {
+      id: number;
+      location: string | null;
+      location_venue: string | null;
+      location_street: string | null;
+      location_zip_city: string | null;
+    } | undefined;
     const legacyMatch = !exists
-      ? (existingLegacyMatchStmt.get(teamId, gameDate.toISOString()) as { id: number } | undefined)
+      ? (existingLegacyMatchStmt.get(teamId, gameDate.toISOString()) as {
+          id: number;
+          location: string | null;
+          location_venue: string | null;
+          location_street: string | null;
+          location_zip_city: string | null;
+        } | undefined)
       : undefined;
     const eventToUpdate = exists || legacyMatch;
     if (eventToUpdate) {
+      const fallbackFromDefaultHomeVenue = Boolean(isHomeMatch && !venue && defaultHomeVenue?.name);
+      const locationForUpdate =
+        fallbackFromDefaultHomeVenue && eventToUpdate.location
+          ? eventToUpdate.location
+          : resolvedVenue;
+      const locationVenueForUpdate =
+        fallbackFromDefaultHomeVenue && eventToUpdate.location_venue
+          ? eventToUpdate.location_venue
+          : resolvedVenue;
+      const locationStreetForUpdate =
+        fallbackFromDefaultHomeVenue && eventToUpdate.location_street
+          ? eventToUpdate.location_street
+          : resolvedStreet;
+      const locationZipCityForUpdate =
+        fallbackFromDefaultHomeVenue && eventToUpdate.location_zip_city
+          ? eventToUpdate.location_zip_city
+          : resolvedZipCity;
+
       updateImportedEventStmt.run(
         title,
         description,
-        venue || null,
-        venue || null,
-        street || null,
-        zipCity || null,
+        locationForUpdate,
+        locationVenueForUpdate,
+        locationStreetForUpdate,
+        locationZipCityForUpdate,
         defaultArrivalMinutes,
         gameDate.toISOString(),
         endDate.toISOString(),
@@ -1004,10 +1078,10 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       title,
       'match',
       description,
-      venue || null,
-      venue || null,
-      street || null,
-      zipCity || null,
+      resolvedVenue,
+      resolvedVenue,
+      resolvedStreet,
+      resolvedZipCity,
       null,
       null,
       defaultArrivalMinutes,

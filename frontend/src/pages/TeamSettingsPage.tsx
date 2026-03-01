@@ -25,6 +25,7 @@ export default function TeamSettingsPage() {
   const [defaultArrivalMinutesTraining, setDefaultArrivalMinutesTraining] = useState('');
   const [defaultArrivalMinutesMatch, setDefaultArrivalMinutesMatch] = useState('');
   const [homeVenues, setHomeVenues] = useState<Array<{ name: string; street: string; zip_city: string; pitch_type: string }>>([]);
+  const [defaultHomeVenueName, setDefaultHomeVenueName] = useState('');
 
   const pitchTypeOptions: Array<{ value: string; label: string }> = [
     { value: 'Rasen', label: 'Rasen' },
@@ -100,6 +101,7 @@ export default function TeamSettingsPage() {
           }))
         : []
     );
+    setDefaultHomeVenueName(String(settings.default_home_venue_name || ''));
   }, [settings]);
 
   const invalidateSettingsQueries = () => {
@@ -186,6 +188,7 @@ export default function TeamSettingsPage() {
   const updateHomeVenuesMutation = useMutation({
     mutationFn: (payload: {
       home_venues: Array<{ name: string; street?: string; zip_city?: string; pitch_type?: string }>;
+      default_home_venue_name?: string | null;
     }) => teamsAPI.updateSettings(teamId, payload),
     onSuccess: () => {
       invalidateSettingsQueries();
@@ -337,8 +340,21 @@ export default function TeamSettingsPage() {
       return;
     }
 
+    const validVenueNames = normalizedHomeVenues.map((venue) => venue.name);
+    const effectiveDefaultHomeVenueName =
+      validVenueNames.length === 0
+        ? null
+        : validVenueNames.includes(defaultHomeVenueName)
+          ? defaultHomeVenueName
+          : validVenueNames[0];
+
+    if (effectiveDefaultHomeVenueName !== defaultHomeVenueName) {
+      setDefaultHomeVenueName(effectiveDefaultHomeVenueName || '');
+    }
+
     updateHomeVenuesMutation.mutate({
       home_venues: normalizedHomeVenues,
+      default_home_venue_name: effectiveDefaultHomeVenueName,
     });
   };
 
@@ -859,6 +875,27 @@ export default function TeamSettingsPage() {
                 >
                   Platz hinzufügen
                 </button>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Standardplatz</label>
+                <select
+                  value={defaultHomeVenueName}
+                  onChange={(e) => setDefaultHomeVenueName(e.target.value)}
+                  className="input"
+                  title="Standardplatz auswählen"
+                  aria-label="Standardplatz auswählen"
+                >
+                  <option value="">Kein Standardplatz</option>
+                  {homeVenues
+                    .map((venue) => venue.name.trim())
+                    .filter((name, index, arr) => name && arr.indexOf(name) === index)
+                    .map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                </select>
               </div>
 
               {homeVenues.length === 0 ? (
