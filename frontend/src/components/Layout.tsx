@@ -115,7 +115,7 @@ export default function Layout({ organization }: LayoutProps) {
       <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between min-h-[3.5rem] sm:h-16 py-1 sm:py-0">
-            <div className="flex items-center">
+            <div className="flex items-center min-w-0 flex-1">
               <Link to={user?.role === 'admin' ? '/admin' : '/'} className="flex items-center space-x-1 sm:space-x-2 min-w-0">
                 <img src="/sqadx-logo.svg" alt="sqadX.app logo" className="w-6 h-6" />
                 <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
@@ -131,7 +131,7 @@ export default function Layout({ organization }: LayoutProps) {
                         />
                       )}
                       {organizationName !== 'Dein Verein' && (
-                        <span className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight max-w-[120px] max-h-10 overflow-hidden break-words sm:max-w-[220px] sm:max-h-none sm:truncate sm:whitespace-nowrap">{organizationName}</span>
+                        <span className="block text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 leading-tight max-w-[95px] truncate whitespace-nowrap sm:max-w-[220px]">{organizationName}</span>
                       )}
                     </>
                   )}
@@ -139,7 +139,7 @@ export default function Layout({ organization }: LayoutProps) {
               </Link>
             </div>
 
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 shrink-0 pl-2">
               <div className="hidden md:flex items-center space-x-1">
                 {user?.role !== 'admin' && (
                   <Link
