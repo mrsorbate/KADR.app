@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, Settings2 } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl } from '../lib/utils';
@@ -363,7 +363,10 @@ export default function EventEditPage() {
       <div className="card">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="card border border-gray-200 dark:border-gray-700">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Termin</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-primary-600" />
+              Termin
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Kategorie *</label>
@@ -471,7 +474,10 @@ export default function EventEditPage() {
           </div>
 
           <div className="card border border-gray-200 dark:border-gray-700">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Ort & Organisation</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary-600" />
+              Ort & Organisation
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstaette</label>
@@ -594,7 +600,10 @@ export default function EventEditPage() {
 
           <div className="card border border-gray-200 dark:border-gray-700">
               <div className="space-y-4">
-                <h4 className="font-medium text-gray-900 dark:text-white">Einstellungen</h4>
+                <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <Settings2 className="w-4 h-4 text-primary-600" />
+                  Einstellungen
+                </h4>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist</label>

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, Settings2, Repeat } from 'lucide-react';
 import { resolveAssetUrl } from '../lib/utils';
 
 export default function EventCreatePage() {
@@ -435,7 +435,10 @@ export default function EventCreatePage() {
       <div className="card">
         <form onSubmit={handleCreateEvent} className="space-y-4">
           <div className="card border border-gray-200 dark:border-gray-700">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Termin</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-primary-600" />
+              Termin
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {!initialTeamId && teamsForCreate?.length === 1 && (
               <div className="md:col-span-2">
@@ -558,7 +561,10 @@ export default function EventCreatePage() {
           </div>
 
           <div className="card border border-gray-200 dark:border-gray-700">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Ort & Organisation</h4>
+            <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-primary-600" />
+              Ort & Organisation
+            </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstätte</label>
@@ -704,7 +710,10 @@ export default function EventCreatePage() {
           </div>
 
             <div className="card border border-gray-200 dark:border-gray-700">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Einstellungen</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Settings2 className="w-4 h-4 text-primary-600" />
+                Einstellungen
+              </h4>
 
               <div className="space-y-4">
                 {membersForCreate?.length ? (
@@ -752,7 +761,10 @@ export default function EventCreatePage() {
           </div>
 
             <div className="card border border-gray-200 dark:border-gray-700">
-              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Serientermin</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-primary-600" />
+                Serientermin
+              </h4>
 
               <div className="space-y-4">
                 <div>
