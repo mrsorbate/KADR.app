@@ -354,13 +354,23 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
 
 // Update fussball.de team id (trainers only)
 export const runTeamGameImport = async (teamId: number, createdByUserId: number) => {
+  const importDebugEnabled = process.env.FUSSBALL_IMPORT_DEBUG === '1';
+  const importDebugLog = (message: string, payload?: unknown) => {
+    if (!importDebugEnabled) return;
+    if (payload === undefined) {
+      console.log(`[fussball-import-debug] ${message}`);
+      return;
+    }
+    console.log(`[fussball-import-debug] ${message}`, payload);
+  };
+
   const team = db.prepare(
     `SELECT id, name, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours, default_rsvp_deadline_hours_match,
             default_arrival_minutes, default_arrival_minutes_match
      FROM teams WHERE id = ?`
   ).get(teamId) as any;
 
-  if (!team) {
+  if (!team || !team.fussballde_id) {
     throw new Error('TEAM_NOT_FOUND');
   }
 
@@ -581,6 +591,24 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     if (!gameDate) return false;
     return gameDate >= seasonBounds.start && gameDate <= seasonBounds.end;
   });
+
+  importDebugLog('Imported payload game collections', {
+    teamId,
+    teamFussballDeId: team.fussballde_id,
+    candidateGames: allCandidateGames.length,
+    uniqueGames: uniqueGames.length,
+    seasonGames: seasonGames.length,
+  });
+
+  if (seasonGames.length > 0) {
+    importDebugLog(
+      'Sample payload keys (first 3 games)',
+      seasonGames.slice(0, 3).map((game, index) => ({
+        index,
+        keys: Object.keys((game || {}) as Record<string, unknown>).slice(0, 120),
+      }))
+    );
+  }
 
   const members = db.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(teamId) as Array<{ user_id: number }>;
   const memberIds = members.map((member) => member.user_id);
@@ -834,6 +862,28 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       pickFromLocationObjects('zip_city', 'zipCity', 'postleitzahl_stadt', 'plz_ort', 'plzOrt'),
     ) || (zip || city ? `${zip ? `${zip} ` : ''}${city || ''}`.trim() : null);
     const description = pickFirstString(game?.competition, game?.competition_short, game?.league, game?.staffel) || null;
+
+    importDebugLog('Resolved game address fields', {
+      externalGameId,
+      title,
+      extracted: {
+        venue: venue || null,
+        street: street || null,
+        zipCity: zipCity || null,
+      },
+      raw: {
+        location: game?.location ?? null,
+        venue: game?.venue ?? null,
+        address: game?.address ?? null,
+        adresse: game?.adresse ?? null,
+        street: game?.street ?? null,
+        city: game?.city ?? null,
+        zip: game?.zip ?? null,
+        plz: game?.plz ?? null,
+        location_street: game?.location_street ?? null,
+        location_zip_city: game?.location_zip_city ?? null,
+      },
+    });
 
     const exists = existingEventByExternalIdStmt.get(externalGameId) as { id: number } | undefined;
     const legacyMatch = !exists
