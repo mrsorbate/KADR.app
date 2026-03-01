@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { ArrowLeft, CalendarDays, MapPin, Settings2, Repeat } from 'lucide-react';
-import { resolveAssetUrl } from '../lib/utils';
+import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
 
 export default function EventCreatePage() {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +45,10 @@ export default function EventCreatePage() {
   const [inviteSelectionModalOpen, setInviteSelectionModalOpen] = useState(false);
   const [rsvpDeadlineOffsetHours, setRsvpDeadlineOffsetHours] = useState('');
 
+  const durationConfig = { min: 5, step: 5 } as const;
+  const arrivalConfig = { min: 0, max: 240, step: 5 } as const;
+  const rsvpHoursConfig = { min: 0, max: 168, step: 1 } as const;
+
   const categoryOptions: Array<{ value: 'training' | 'match' | 'other'; label: string }> = [
     { value: 'training', label: 'Training' },
     { value: 'match', label: 'Spiel' },
@@ -67,18 +71,14 @@ export default function EventCreatePage() {
 
   const stepDurationMinutes = (delta: number) => {
     setEventData((prev) => {
-      const current = parseInt(prev.duration_minutes, 10);
-      const baseValue = Number.isFinite(current) ? current : 5;
-      const nextValue = Math.max(5, baseValue + delta);
+      const nextValue = stepNumberFieldValue(prev.duration_minutes, delta, durationConfig);
       return { ...prev, duration_minutes: String(nextValue) };
     });
   };
 
   const stepArrivalMinutes = (delta: number) => {
     setEventData((prev) => {
-      const current = parseInt(prev.arrival_minutes, 10);
-      const baseValue = Number.isFinite(current) ? current : 0;
-      const nextValue = Math.max(0, baseValue + delta);
+      const nextValue = stepNumberFieldValue(prev.arrival_minutes, delta, arrivalConfig);
       return { ...prev, arrival_minutes: String(nextValue) };
     });
   };
@@ -98,7 +98,7 @@ export default function EventCreatePage() {
       return;
     }
 
-    const normalizedHours = Math.max(0, Math.min(168, Math.round(hoursBefore)));
+    const normalizedHours = stepNumberFieldValue(hoursBefore, 0, rsvpHoursConfig);
     const deadlineDate = new Date(startDate.getTime() - normalizedHours * 60 * 60 * 1000);
     setRsvpDeadlineOffsetHours(String(normalizedHours));
     setEventData((prev) => ({ ...prev, rsvp_deadline: formatLocalDateTime(deadlineDate) }));
@@ -125,7 +125,7 @@ export default function EventCreatePage() {
     }
 
     const diffHours = Math.round(diffMs / (60 * 60 * 1000));
-    return String(Math.min(168, Math.max(0, diffHours)));
+    return String(stepNumberFieldValue(diffHours, 0, rsvpHoursConfig));
   };
 
   const handleMinutesWheel = (event: React.WheelEvent<HTMLInputElement>, field: 'duration_minutes' | 'arrival_minutes') => {
@@ -586,8 +586,8 @@ export default function EventCreatePage() {
                 </button>
                 <input
                   type="number"
-                  min={5}
-                  step={5}
+                  min={durationConfig.min}
+                  step={durationConfig.step}
                   required
                   value={eventData.duration_minutes}
                   onChange={(e) => setEventData({ ...eventData, duration_minutes: e.target.value })}
@@ -730,8 +730,9 @@ export default function EventCreatePage() {
                 </button>
                 <input
                   type="number"
-                  min={0}
-                  step={5}
+                  min={arrivalConfig.min}
+                  max={arrivalConfig.max}
+                  step={arrivalConfig.step}
                   value={eventData.arrival_minutes}
                   onChange={(e) => setEventData({ ...eventData, arrival_minutes: e.target.value })}
                   onWheel={(e) => handleMinutesWheel(e, 'arrival_minutes')}
@@ -823,8 +824,8 @@ export default function EventCreatePage() {
                       type="button"
                       onClick={() => {
                         const current = parseInt(getCurrentRsvpDeadlineOffsetHours(), 10);
-                        const baseValue = Number.isFinite(current) ? current : 0;
-                        const nextValue = Math.max(0, Math.min(168, baseValue - 1));
+                        const baseValue = Number.isFinite(current) ? current : rsvpHoursConfig.min;
+                        const nextValue = stepNumberFieldValue(baseValue, -1, rsvpHoursConfig);
                         setRsvpDeadlineOffsetHours(String(nextValue));
                         if (eventData.start_time) {
                           applyRsvpDeadlineOffsetHours(nextValue);
@@ -837,9 +838,9 @@ export default function EventCreatePage() {
                     </button>
                     <input
                       type="number"
-                      min={0}
-                      max={168}
-                      step={1}
+                      min={rsvpHoursConfig.min}
+                      max={rsvpHoursConfig.max}
+                      step={rsvpHoursConfig.step}
                       value={getCurrentRsvpDeadlineOffsetHours()}
                       onChange={(e) => {
                         setRsvpDeadlineOffsetHours(e.target.value);
@@ -862,8 +863,8 @@ export default function EventCreatePage() {
                       type="button"
                       onClick={() => {
                         const current = parseInt(getCurrentRsvpDeadlineOffsetHours(), 10);
-                        const baseValue = Number.isFinite(current) ? current : 0;
-                        const nextValue = Math.max(0, Math.min(168, baseValue + 1));
+                        const baseValue = Number.isFinite(current) ? current : rsvpHoursConfig.min;
+                        const nextValue = stepNumberFieldValue(baseValue, 1, rsvpHoursConfig);
                         setRsvpDeadlineOffsetHours(String(nextValue));
                         if (eventData.start_time) {
                           applyRsvpDeadlineOffsetHours(nextValue);

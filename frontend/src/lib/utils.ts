@@ -45,3 +45,42 @@ export function resolveAssetUrl(assetPath?: string | null) {
 
   return assetPath;
 }
+
+export type NumberFieldConfig = {
+  min: number;
+  max?: number;
+  step?: number;
+};
+
+export function clampNumber(value: number, min: number, max?: number): number {
+  if (Number.isNaN(value)) return min;
+  if (max === undefined) return Math.max(min, value);
+  return Math.min(max, Math.max(min, value));
+}
+
+export function normalizeNumberFieldValue(value: unknown, config: NumberFieldConfig): number | null {
+  const parsed = typeof value === 'number' ? value : parseInt(String(value), 10);
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  const stepped = config.step && config.step > 0
+    ? config.min + Math.round((parsed - config.min) / config.step) * config.step
+    : parsed;
+
+  return clampNumber(stepped, config.min, config.max);
+}
+
+export function stepNumberFieldValue(currentValue: unknown, delta: number, config: NumberFieldConfig): number {
+  const normalizedCurrent = normalizeNumberFieldValue(currentValue, config);
+  const fallback = config.min;
+  const baseValue = normalizedCurrent === null ? fallback : normalizedCurrent;
+  const next = baseValue + delta;
+
+  if (config.step && config.step > 0) {
+    const stepped = config.min + Math.round((next - config.min) / config.step) * config.step;
+    return clampNumber(stepped, config.min, config.max);
+  }
+
+  return clampNumber(next, config.min, config.max);
+}
