@@ -41,6 +41,38 @@ set_or_append_env() {
     fi
 }
 
+check_npm_update() {
+    if ! command -v npm >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  npm nicht gefunden – Update-Check übersprungen${NC}"
+        return
+    fi
+
+    local current_npm latest_npm current_major latest_major
+    current_npm="$(npm -v 2>/dev/null || true)"
+    latest_npm="$(npm view npm version 2>/dev/null || true)"
+
+    if [ -z "$current_npm" ] || [ -z "$latest_npm" ]; then
+        echo -e "${YELLOW}⚠️  npm-Version konnte nicht vollständig geprüft werden${NC}"
+        return
+    fi
+
+    current_major="${current_npm%%.*}"
+    latest_major="${latest_npm%%.*}"
+
+    if [ "$current_npm" = "$latest_npm" ]; then
+        echo -e "${GREEN}✓ npm ist aktuell (${current_npm})${NC}"
+        return
+    fi
+
+    if [ "$latest_major" -gt "$current_major" ] 2>/dev/null; then
+        echo -e "${YELLOW}⚠️  npm-Update empfohlen: ${current_npm} → ${latest_npm}${NC}"
+        echo -e "${YELLOW}   Optional ausführen: npm install -g npm@${latest_major}${NC}"
+    else
+        echo -e "${YELLOW}ℹ️  npm kann aktualisiert werden: ${current_npm} → ${latest_npm}${NC}"
+        echo -e "${YELLOW}   Optional ausführen: npm install -g npm@latest${NC}"
+    fi
+}
+
 # Überprüfe, ob wir im korrekten Verzeichnis sind
 if [ ! -f "docker-compose.build.yml" ]; then
     error_exit "Nicht im sqadx.app-Verzeichnis. Bitte ausführen im ./sqadx.app Ordner"
@@ -61,6 +93,11 @@ if ! git pull; then
     error_exit "Git Pull fehlgeschlagen. Überprüfe deine Internet-Verbindung oder lokale Änderungen."
 fi
 echo -e "${GREEN}✓ Code aktualisiert${NC}\n"
+
+# npm Versionscheck
+echo -e "${BLUE}📦 Prüfe npm-Version...${NC}"
+check_npm_update
+echo ""
 
 # Sicherstellen, dass api-fussball Basis-URL in Root-.env vorhanden ist
 if [ -f ".env" ]; then
