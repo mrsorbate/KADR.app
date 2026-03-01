@@ -20,13 +20,15 @@ import FirstTimeSetupPage from './pages/FirstTimeSetupPage';
 import { settingsAPI } from './lib/api';
 import { useDarkMode } from './hooks/useDarkMode';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 
 function App() {
   const { token } = useAuthStore();
   useDarkMode(); // Initialize dark mode
+  const [showLoadWarning, setShowLoadWarning] = useState(false);
 
   // Fetch organization using React Query
-  const { data: organization, isLoading } = useQuery({
+  const { data: organization, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['organization'],
     queryFn: async () => {
       const response = await settingsAPI.getOrganization();
@@ -36,7 +38,20 @@ function App() {
     staleTime: 0, // Always refetch to ensure fresh data
   });
 
-  const setupCompleted = organization?.setup_completed === 1;
+  useEffect(() => {
+    if (!isLoading) {
+      setShowLoadWarning(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowLoadWarning(true);
+    }, 8000);
+
+    return () => window.clearTimeout(timer);
+  }, [isLoading]);
+
+  const setupCompleted = isError ? true : organization?.setup_completed === 1;
 
   if (isLoading) {
     return (
@@ -44,6 +59,19 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-gray-300">Lädt...</p>
+          {showLoadWarning && (
+            <div className="mt-4 text-sm text-gray-400 max-w-sm">
+              <p className="mb-3">Das Laden dauert ungewöhnlich lange. Prüfe bitte die API-Verbindung.</p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="px-3 py-2 rounded-md bg-gray-800 border border-gray-600 text-gray-200 hover:bg-gray-700 disabled:opacity-60"
+              >
+                Erneut versuchen
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
