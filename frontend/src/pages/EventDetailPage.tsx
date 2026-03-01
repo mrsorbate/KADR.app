@@ -203,6 +203,47 @@ export default function EventDetailPage() {
     );
   };
 
+  const eventDateLabel = format(new Date(event?.start_time), 'PPP', { locale: de });
+  const eventTimeRangeLabel = `${format(new Date(event?.start_time), 'p', { locale: de })} - ${format(new Date(event?.end_time), 'p', { locale: de })}`;
+  const locationLabel = ([event?.location_venue, event?.location_street, event?.location_zip_city]
+    .filter(Boolean)
+    .join(', ') || event?.location || '').trim();
+  const hasMeetingInfo = (event?.meeting_point && String(event.meeting_point).trim().length > 0)
+    || (event?.arrival_minutes !== null && event?.arrival_minutes !== undefined);
+
+  const renderResponseModule = (
+    title: string,
+    count: number,
+    toneClass: string,
+    icon: string,
+    responses: any[],
+    currentStatus: 'accepted' | 'declined' | 'tentative' | 'pending'
+  ) => {
+    if (count === 0) return null;
+
+    return (
+      <div className="card">
+        <h3 className={`font-semibold mb-3 flex items-center ${toneClass}`}>
+          <span className="mr-2">{icon}</span>
+          {title} ({count})
+        </h3>
+        <div className="space-y-2">
+          {responses.map((response: any) => (
+            <div
+              key={response.id}
+              onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
+              className="w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              {renderAvatar(response.user_name, response.user_profile_picture)}
+              <span className="text-gray-900 dark:text-white">{response.user_name}</span>
+              {renderTrainerStatusActions(response.user_id, currentStatus)}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-start sm:items-center space-x-3 sm:space-x-4">
@@ -240,113 +281,72 @@ export default function EventDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="card">
             <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Details</h2>
-            <div className="space-y-3">
-              <div className="flex items-start space-x-3">
-                <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {format(new Date(event?.start_time), 'PPP', { locale: de })}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    {format(new Date(event?.start_time), 'p', { locale: de })} -{' '}
-                    {format(new Date(event?.end_time), 'p', { locale: de })}
-                  </p>
-                </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Datum</p>
+                <p className="font-medium text-gray-900 dark:text-white">{eventDateLabel}</p>
               </div>
 
-              {event?.duration_minutes && (
-                <div className="flex items-start space-x-3">
-                  <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Dauer</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{event.duration_minutes} Minuten</p>
-                  </div>
+              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Uhrzeit</p>
+                <p className="font-medium text-gray-900 dark:text-white">{eventTimeRangeLabel}</p>
+              </div>
+
+              {locationLabel && (
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Ort</p>
+                  <p className="font-medium text-gray-900 dark:text-white break-words">{locationLabel}</p>
+                </div>
+              )}
+
+              {hasMeetingInfo && (
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Treffpunkt</p>
+                  {event?.meeting_point && (
+                    <p className="font-medium text-gray-900 dark:text-white break-words">{event.meeting_point}</p>
+                  )}
+                  {event?.arrival_minutes !== null && event?.arrival_minutes !== undefined && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {event.arrival_minutes} Minuten vor Beginn
+                    </p>
+                  )}
                 </div>
               )}
 
               {event?.type === 'match' && event?.is_home_match !== undefined && (
-                <div className="flex items-start space-x-3">
-                  <span className="text-xl mt-0.5">{event.is_home_match ? '🏠' : '🚗'}</span>
-                  <div>
-                    <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                      event.is_home_match
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                        : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
-                    }`}>
-                      {event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}
-                    </div>
-                  </div>
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Spielart</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{event.is_home_match ? 'Heimspiel' : 'Auswärtsspiel'}</p>
                 </div>
               )}
 
-              {(event?.location_venue || event?.location_street || event?.location_zip_city || event?.location) && (
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    {event?.location_venue && (
-                      <p className="font-medium text-gray-900 dark:text-white">{event.location_venue}</p>
-                    )}
-                    {event?.location_street && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{event.location_street}</p>
-                    )}
-                    {event?.location_zip_city && (
-                      <p className="text-sm text-gray-600 dark:text-gray-300">{event.location_zip_city}</p>
-                    )}
-                    {!event?.location_venue && !event?.location_street && !event?.location_zip_city && event?.location && (
-                      <p className="font-medium text-gray-900 dark:text-white">{event.location}</p>
-                    )}
-                  </div>
+              {event?.duration_minutes && (
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Dauer</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{event.duration_minutes} Minuten</p>
                 </div>
               )}
 
               {event?.pitch_type && (
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Platzart</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{event.pitch_type}</p>
-                  </div>
-                </div>
-              )}
-
-              {event?.meeting_point && (
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Treffpunkt</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{event.meeting_point}</p>
-                  </div>
-                </div>
-              )}
-
-              {event?.arrival_minutes !== null && event?.arrival_minutes !== undefined && (
-                <div className="flex items-start space-x-3">
-                  <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Treffen</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{event.arrival_minutes} Minuten vor Beginn</p>
-                  </div>
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Platzart</p>
+                  <p className="font-medium text-gray-900 dark:text-white">{event.pitch_type}</p>
                 </div>
               )}
 
               {event?.rsvp_deadline && (
-                <div className="flex items-start space-x-3">
-                  <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">Rueckmeldefrist</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      {format(new Date(event.rsvp_deadline), 'PPPp', { locale: de })}
-                    </p>
-                  </div>
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Rückmeldefrist</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {format(new Date(event.rsvp_deadline), 'PPPp', { locale: de })}
+                  </p>
                 </div>
               )}
 
               {event?.description && (
-                <div className="flex items-start space-x-3">
-                  <MessageSquare className="w-5 h-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-gray-700 dark:text-gray-300">{event.description}</p>
-                  </div>
+                <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3 sm:col-span-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Beschreibung</p>
+                  <p className="text-gray-700 dark:text-gray-300 break-words">{event.description}</p>
                 </div>
               )}
             </div>
@@ -435,108 +435,40 @@ export default function EventDetailPage() {
         <div className="space-y-4">
           {canViewResponses ? (
             <>
-              <div className="card">
-                <h3 className="font-semibold text-green-700 dark:text-green-300 mb-3 flex items-center">
-                  <span className="mr-2">✓</span>
-                  Zugesagt ({acceptedResponses.length})
-                </h3>
-                <div className="space-y-2">
-                  {acceptedResponses.map((response: any) => (
-                    <div
-                      key={response.id}
-                      onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
-                      className={`w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 transition-colors ${
-                        isTrainer
-                          ? 'hover:bg-green-50 dark:hover:bg-green-900/20 cursor-pointer'
-                          : ''
-                      }`}
-                    >
-                      {renderAvatar(response.user_name, response.user_profile_picture)}
-                      <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                      {renderTrainerStatusActions(response.user_id, 'accepted')}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="card">
-                <h3 className="font-semibold text-red-700 dark:text-red-300 mb-3 flex items-center">
-                  <span className="mr-2">✗</span>
-                  Abgesagt ({declinedResponses.length})
-                </h3>
-                <div className="space-y-2">
-                  {declinedResponses.map((response: any) => (
-                    <div key={response.id} className="text-sm">
-                      <div
-                        onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
-                        className={`w-full flex items-center space-x-2 rounded-md px-1 py-1 transition-colors ${
-                          isTrainer
-                            ? 'hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer'
-                            : ''
-                        }`}
-                      >
-                        {renderAvatar(response.user_name, response.user_profile_picture)}
-                        <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                        {renderTrainerStatusActions(response.user_id, 'declined')}
-                      </div>
-                      {response.comment && (
-                        <p className="text-gray-600 dark:text-gray-300 text-xs mt-1 ml-6">{response.comment}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {tentativeResponses.length > 0 && (
-                <div className="card">
-                  <h3 className="font-semibold text-yellow-700 dark:text-yellow-300 mb-3 flex items-center">
-                    <span className="mr-2">?</span>
-                    Vielleicht ({tentativeResponses.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {tentativeResponses.map((response: any) => (
-                      <div
-                        key={response.id}
-                        onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
-                        className={`w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 transition-colors ${
-                          isTrainer
-                            ? 'hover:bg-yellow-50 dark:hover:bg-yellow-900/20 cursor-pointer'
-                            : ''
-                        }`}
-                      >
-                        {renderAvatar(response.user_name, response.user_profile_picture)}
-                        <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                        {renderTrainerStatusActions(response.user_id, 'tentative')}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {renderResponseModule(
+                'Zugesagt',
+                acceptedResponses.length,
+                'text-green-700 dark:text-green-300',
+                '✓',
+                acceptedResponses,
+                'accepted'
               )}
 
-              {pendingResponses.length > 0 && (
-                <div className="card">
-                  <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                    <span className="mr-2">⏳</span>
-                    Keine Antwort ({pendingResponses.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {pendingResponses.map((response: any) => (
-                      <div
-                        key={response.id}
-                        onClick={() => isTrainer && setExpandedResponseUserId((prev) => (prev === response.user_id ? null : response.user_id))}
-                        className={`w-full flex items-center space-x-2 text-sm rounded-md px-1 py-1 transition-colors ${
-                          isTrainer
-                            ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
-                            : ''
-                        }`}
-                      >
-                        {renderAvatar(response.user_name, response.user_profile_picture)}
-                        <span className="text-gray-900 dark:text-white">{response.user_name}</span>
-                        {renderTrainerStatusActions(response.user_id, 'pending')}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {renderResponseModule(
+                'Abgesagt',
+                declinedResponses.length,
+                'text-red-700 dark:text-red-300',
+                '✗',
+                declinedResponses,
+                'declined'
+              )}
+
+              {renderResponseModule(
+                'Vielleicht',
+                tentativeResponses.length,
+                'text-yellow-700 dark:text-yellow-300',
+                '?',
+                tentativeResponses,
+                'tentative'
+              )}
+
+              {renderResponseModule(
+                'Keine Antwort',
+                pendingResponses.length,
+                'text-gray-700 dark:text-gray-300',
+                '⏳',
+                pendingResponses,
+                'pending'
               )}
             </>
           ) : (
