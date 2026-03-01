@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import type { Database as DatabaseType } from 'better-sqlite3';
+import { randomBytes } from 'crypto';
 
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../../database.sqlite');
 const db: DatabaseType = new Database(dbPath);
@@ -333,8 +334,39 @@ try {
     db.exec('ALTER TABLE teams ADD COLUMN calendar_token TEXT');
     console.log('✅ Added calendar_token column to teams table');
   }
-  db.exec("UPDATE teams SET calendar_token = lower(hex(randomblob(24))) WHERE calendar_token IS NULL OR TRIM(calendar_token) = ''");
-  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_calendar_token ON teams(calendar_token)');
+
+  const refreshedTeamColumns = db.pragma('table_info(teams)') as Array<{ name: string }>;
+  const hasCalendarTokenAfterMigration = refreshedTeamColumns.some((col) => col.name === 'calendar_token');
+
+  if (hasCalendarTokenAfterMigration) {
+    try {
+      const teamsWithToken = db
+        .prepare('SELECT id, calendar_token FROM teams ORDER BY id ASC')
+        .all() as Array<{ id: number; calendar_token: string | null }>;
+
+      const seenTokens = new Set<string>();
+      const updateCalendarTokenStmt = db.prepare('UPDATE teams SET calendar_token = ? WHERE id = ?');
+
+      for (const teamRow of teamsWithToken) {
+        const currentToken = String(teamRow.calendar_token || '').trim();
+        let nextToken = currentToken;
+
+        if (!nextToken || seenTokens.has(nextToken)) {
+          do {
+            nextToken = randomBytes(24).toString('hex');
+          } while (seenTokens.has(nextToken));
+
+          updateCalendarTokenStmt.run(nextToken, teamRow.id);
+        }
+
+        seenTokens.add(nextToken);
+      }
+
+      db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_calendar_token ON teams(calendar_token)');
+    } catch (calendarTokenMigrationError) {
+      console.warn('⚠️ Calendar token migration warning:', calendarTokenMigrationError);
+    }
+  }
 
   const hasFussballDeId = teamColumns.some((col) => col.name === 'fussballde_id');
   if (!hasFussballDeId) {

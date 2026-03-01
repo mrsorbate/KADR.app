@@ -9,6 +9,18 @@ import { CreateTeamDTO } from '../types';
 
 const router = Router();
 const HARDCODED_FUSSBALL_API_TOKEN = 'w1G797J1N7u8a0e1R0C8A1Z2e5TYQm1Sezgk0lBUik';
+const hasTeamsCalendarTokenColumn = (() => {
+  try {
+    const columns = db.prepare("PRAGMA table_info('teams')").all() as Array<{ name: string }>;
+    return columns.some((column) => column.name === 'calendar_token');
+  } catch {
+    return false;
+  }
+})();
+
+const calendarTokenSelectExpression = hasTeamsCalendarTokenColumn
+  ? 'calendar_token'
+  : 'NULL AS calendar_token';
 
 type HomeVenue = {
   name: string;
@@ -159,6 +171,10 @@ const upload = multer({
 
 router.get('/:id/calendar.ics', (req, res) => {
   try {
+    if (!hasTeamsCalendarTokenColumn) {
+      return res.status(404).json({ error: 'Calendar export is not available' });
+    }
+
     const teamId = parseInt(req.params.id, 10);
     const token = String(req.query.token || '').trim();
 
@@ -166,7 +182,7 @@ router.get('/:id/calendar.ics', (req, res) => {
       return res.status(400).json({ error: 'Invalid calendar request' });
     }
 
-    const team = db.prepare('SELECT id, name, calendar_token FROM teams WHERE id = ?').get(teamId) as any;
+    const team = db.prepare(`SELECT id, name, ${calendarTokenSelectExpression} FROM teams WHERE id = ?`).get(teamId) as any;
     if (!team || String(team.calendar_token || '') !== token) {
       return res.status(403).json({ error: 'Invalid calendar token' });
     }
@@ -293,7 +309,7 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
       `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
-              home_venues, default_home_venue_name, calendar_token
+              home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
 
@@ -565,7 +581,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
-              home_venues, default_home_venue_name, calendar_token
+              home_venues, default_home_venue_name, ${calendarTokenSelectExpression}
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
 
@@ -1490,11 +1506,13 @@ router.post('/', (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Only admins can create teams' });
     }
 
-    const calendarToken = randomBytes(24).toString('hex');
-    const stmt = db.prepare(
-      'INSERT INTO teams (name, description, calendar_token, created_by) VALUES (?, ?, ?, ?)'
-    );
-    const result = stmt.run(name, description, calendarToken, req.user!.id);
+    const result = hasTeamsCalendarTokenColumn
+      ? db
+          .prepare('INSERT INTO teams (name, description, calendar_token, created_by) VALUES (?, ?, ?, ?)')
+          .run(name, description, randomBytes(24).toString('hex'), req.user!.id)
+      : db
+          .prepare('INSERT INTO teams (name, description, created_by) VALUES (?, ?, ?)')
+          .run(name, description, req.user!.id);
 
     // Team is created without members - admin will assign trainers via admin panel
 
