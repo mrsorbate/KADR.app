@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { eventsAPI, teamsAPI } from '../lib/api';
+import { eventsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl } from '../lib/utils';
 import { format } from 'date-fns';
@@ -26,16 +26,6 @@ export default function EventDetailPage() {
       const response = await eventsAPI.getById(eventId);
       return response.data;
     },
-  });
-
-  // Get team membership to check if user is trainer
-  const { data: members } = useQuery({
-    queryKey: ['team-members', event?.team_id],
-    queryFn: async () => {
-      const response = await teamsAPI.getMembers(event!.team_id);
-      return response.data;
-    },
-    enabled: !!event?.team_id,
   });
 
   const updateResponseMutation = useMutation({
