@@ -128,6 +128,162 @@ function hasMatchingPitchTypeInHomeVenues(homeVenuesRaw: unknown, selectedPitchT
   });
 }
 
+type MatchLineupSlot = {
+  slot: string;
+  user_id: number | null;
+};
+
+type MatchSquadRow = {
+  event_id: number;
+  squad_user_ids: string;
+  lineup_slots: string;
+  is_released: number;
+  released_at?: string | null;
+  updated_at?: string | null;
+};
+
+const MATCH_LINEUP_SLOTS = ['TW', 'LV', 'IV1', 'IV2', 'RV', 'DM', 'ZM', 'OM', 'LF', 'ST', 'RF'];
+
+function normalizeSquadUserIds(rawValue: unknown, allowedMemberIds: Set<number>): number[] {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+
+  return [...new Set(rawValue.map((entry) => Number(entry)).filter((entry) => Number.isInteger(entry) && allowedMemberIds.has(entry)))].slice(0, 40);
+}
+
+function normalizeLineupSlots(rawValue: unknown, squadUserIds: Set<number>): MatchLineupSlot[] {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+
+  const seenSlots = new Set<string>();
+  const normalized: MatchLineupSlot[] = [];
+
+  for (const entry of rawValue) {
+    if (!entry || typeof entry !== 'object') {
+      continue;
+    }
+
+    const source = entry as Record<string, unknown>;
+    const slot = String(source.slot || '').trim().toUpperCase();
+    if (!MATCH_LINEUP_SLOTS.includes(slot) || seenSlots.has(slot)) {
+      continue;
+    }
+
+    const rawUserId = source.user_id;
+    const parsedUserId = rawUserId === null || rawUserId === undefined || String(rawUserId).trim() === ''
+      ? null
+      : Number(rawUserId);
+
+    if (parsedUserId !== null && (!Number.isInteger(parsedUserId) || !squadUserIds.has(parsedUserId))) {
+      continue;
+    }
+
+    seenSlots.add(slot);
+    normalized.push({ slot, user_id: parsedUserId });
+  }
+
+  return normalized;
+}
+
+function parseStoredSquadUserIds(rawValue: unknown): number[] {
+  if (typeof rawValue !== 'string' || !rawValue.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) return [];
+    return [...new Set(parsed.map((entry) => Number(entry)).filter((entry) => Number.isInteger(entry)))];
+  } catch {
+    return [];
+  }
+}
+
+function parseStoredLineupSlots(rawValue: unknown): MatchLineupSlot[] {
+  if (typeof rawValue !== 'string' || !rawValue.trim()) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') return null;
+        const source = entry as Record<string, unknown>;
+        const slot = String(source.slot || '').trim().toUpperCase();
+        if (!MATCH_LINEUP_SLOTS.includes(slot)) return null;
+
+        const parsedUserId = source.user_id === null || source.user_id === undefined || String(source.user_id).trim() === ''
+          ? null
+          : Number(source.user_id);
+
+        if (parsedUserId !== null && !Number.isInteger(parsedUserId)) {
+          return null;
+        }
+
+        return {
+          slot,
+          user_id: parsedUserId,
+        };
+      })
+      .filter(Boolean) as MatchLineupSlot[];
+  } catch {
+    return [];
+  }
+}
+
+function createMatchSquadResponse(row: MatchSquadRow | undefined | null) {
+  if (!row) {
+    return {
+      event_id: null,
+      squad_user_ids: [],
+      lineup_slots: [],
+      is_released: 0,
+      released_at: null,
+      updated_at: null,
+      lineup_slot_order: MATCH_LINEUP_SLOTS,
+    };
+  }
+
+  return {
+    event_id: row.event_id,
+    squad_user_ids: parseStoredSquadUserIds(row.squad_user_ids),
+    lineup_slots: parseStoredLineupSlots(row.lineup_slots),
+    is_released: row.is_released ? 1 : 0,
+    released_at: row.released_at || null,
+    updated_at: row.updated_at || null,
+    lineup_slot_order: MATCH_LINEUP_SLOTS,
+  };
+}
+
+function getMatchSquadPlayers(teamId: number, squadUserIds: number[]) {
+  if (!Number.isInteger(teamId) || teamId <= 0 || squadUserIds.length === 0) {
+    return [];
+  }
+
+  const placeholders = squadUserIds.map(() => '?').join(',');
+  const rows = db.prepare(
+    `SELECT u.id, u.name, u.profile_picture, tm.jersey_number
+     FROM users u
+     INNER JOIN team_members tm ON tm.user_id = u.id AND tm.team_id = ?
+     WHERE u.id IN (${placeholders})`
+  ).all(teamId, ...squadUserIds) as Array<{ id: number; name: string; profile_picture?: string; jersey_number?: number | null }>;
+
+  const byId = new Map(rows.map((row) => [Number(row.id), row]));
+  return squadUserIds
+    .map((userId) => byId.get(userId))
+    .filter(Boolean)
+    .map((row) => ({
+      id: Number(row!.id),
+      name: String(row!.name || ''),
+      profile_picture: row!.profile_picture || null,
+      jersey_number: row!.jersey_number ?? null,
+    }));
+}
+
 // Get upcoming events for user (next 6 events)
 router.get('/my-upcoming', (req: AuthRequest, res) => {
   try {
@@ -329,6 +485,168 @@ router.get('/:id', (req: AuthRequest, res) => {
   } catch (error) {
     console.error('Get event error:', error);
     res.status(500).json({ error: 'Failed to fetch event' });
+  }
+});
+
+router.get('/:id/squad', (req: AuthRequest, res) => {
+  try {
+    const eventId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(eventId) || eventId <= 0) {
+      return res.status(400).json({ error: 'Invalid event id' });
+    }
+
+    const event = db.prepare('SELECT id, team_id, type FROM events WHERE id = ?').get(eventId) as any;
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    if (event.type !== 'match') {
+      return res.status(400).json({ error: 'Squad is only available for match events' });
+    }
+
+    const membership = db.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(event.team_id, req.user!.id) as any;
+    if (!membership) {
+      return res.status(403).json({ error: 'Not a team member' });
+    }
+
+    const squadRow = db.prepare(
+      'SELECT event_id, squad_user_ids, lineup_slots, is_released, released_at, updated_at FROM event_match_squads WHERE event_id = ?'
+    ).get(eventId) as MatchSquadRow | undefined;
+
+    const payload = createMatchSquadResponse(squadRow);
+
+    if (membership.role !== 'trainer' && payload.is_released !== 1) {
+      return res.json({
+        event_id: eventId,
+        squad_user_ids: [],
+        lineup_slots: [],
+        squad_players: [],
+        is_released: 0,
+        released_at: null,
+        updated_at: payload.updated_at,
+        lineup_slot_order: MATCH_LINEUP_SLOTS,
+      });
+    }
+
+    return res.json({
+      ...payload,
+      event_id: eventId,
+      squad_players: getMatchSquadPlayers(event.team_id, payload.squad_user_ids),
+    });
+  } catch (error) {
+    console.error('Get match squad error:', error);
+    return res.status(500).json({ error: 'Failed to fetch match squad' });
+  }
+});
+
+router.put('/:id/squad', (req: AuthRequest, res) => {
+  try {
+    const eventId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(eventId) || eventId <= 0) {
+      return res.status(400).json({ error: 'Invalid event id' });
+    }
+
+    const event = db.prepare('SELECT id, team_id, type FROM events WHERE id = ?').get(eventId) as any;
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    if (event.type !== 'match') {
+      return res.status(400).json({ error: 'Squad is only available for match events' });
+    }
+
+    const membership = db.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(event.team_id, req.user!.id) as any;
+    if (!membership || membership.role !== 'trainer') {
+      return res.status(403).json({ error: 'Only trainers can edit match squad' });
+    }
+
+    const teamMemberRows = db.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(event.team_id) as Array<{ user_id: number }>;
+    const allowedMemberIds = new Set(teamMemberRows.map((row) => Number(row.user_id)).filter((value) => Number.isInteger(value)));
+
+    const squadUserIds = normalizeSquadUserIds(req.body?.squad_user_ids, allowedMemberIds);
+    const squadSet = new Set(squadUserIds);
+    const lineupSlots = normalizeLineupSlots(req.body?.lineup_slots, squadSet);
+
+    db.prepare(
+      `INSERT INTO event_match_squads (event_id, squad_user_ids, lineup_slots, is_released, released_at, updated_at)
+       VALUES (?, ?, ?, 0, NULL, CURRENT_TIMESTAMP)
+       ON CONFLICT(event_id) DO UPDATE SET
+         squad_user_ids = excluded.squad_user_ids,
+         lineup_slots = excluded.lineup_slots,
+         is_released = 0,
+         released_at = NULL,
+         updated_at = CURRENT_TIMESTAMP`
+    ).run(eventId, JSON.stringify(squadUserIds), JSON.stringify(lineupSlots));
+
+    const updatedRow = db.prepare(
+      'SELECT event_id, squad_user_ids, lineup_slots, is_released, released_at, updated_at FROM event_match_squads WHERE event_id = ?'
+    ).get(eventId) as MatchSquadRow;
+
+    const payload = createMatchSquadResponse(updatedRow);
+    return res.json({
+      ...payload,
+      squad_players: getMatchSquadPlayers(event.team_id, payload.squad_user_ids),
+    });
+  } catch (error) {
+    console.error('Update match squad error:', error);
+    return res.status(500).json({ error: 'Failed to update match squad' });
+  }
+});
+
+router.post('/:id/squad/release', (req: AuthRequest, res) => {
+  try {
+    const eventId = parseInt(req.params.id, 10);
+    if (!Number.isInteger(eventId) || eventId <= 0) {
+      return res.status(400).json({ error: 'Invalid event id' });
+    }
+
+    const event = db.prepare('SELECT id, team_id, type FROM events WHERE id = ?').get(eventId) as any;
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    if (event.type !== 'match') {
+      return res.status(400).json({ error: 'Squad is only available for match events' });
+    }
+
+    const membership = db.prepare('SELECT role FROM team_members WHERE team_id = ? AND user_id = ?').get(event.team_id, req.user!.id) as any;
+    if (!membership || membership.role !== 'trainer') {
+      return res.status(403).json({ error: 'Only trainers can release match squad' });
+    }
+
+    const existingSquad = db.prepare(
+      'SELECT event_id, squad_user_ids, lineup_slots, is_released, released_at, updated_at FROM event_match_squads WHERE event_id = ?'
+    ).get(eventId) as MatchSquadRow | undefined;
+
+    if (!existingSquad) {
+      return res.status(400).json({ error: 'Bitte zuerst einen Kader speichern' });
+    }
+
+    const squadUserIds = parseStoredSquadUserIds(existingSquad.squad_user_ids);
+    if (squadUserIds.length === 0) {
+      return res.status(400).json({ error: 'Bitte mindestens einen Spieler im Kader auswählen' });
+    }
+
+    db.prepare(
+      `UPDATE event_match_squads
+       SET is_released = 1,
+           released_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE event_id = ?`
+    ).run(eventId);
+
+    const releasedRow = db.prepare(
+      'SELECT event_id, squad_user_ids, lineup_slots, is_released, released_at, updated_at FROM event_match_squads WHERE event_id = ?'
+    ).get(eventId) as MatchSquadRow;
+
+    const payload = createMatchSquadResponse(releasedRow);
+    return res.json({
+      ...payload,
+      squad_players: getMatchSquadPlayers(event.team_id, payload.squad_user_ids),
+    });
+  } catch (error) {
+    console.error('Release match squad error:', error);
+    return res.status(500).json({ error: 'Failed to release match squad' });
   }
 });
 

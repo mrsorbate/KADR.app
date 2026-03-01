@@ -171,6 +171,18 @@ export const eventsAPI = {
 
   updatePlayerResponse: (id: number, userId: number, data: { status: string; comment?: string }) =>
     api.post(`/events/${id}/response/${userId}`, data),
+
+  getMatchSquad: (id: number) => api.get(`/events/${id}/squad`),
+
+  updateMatchSquad: (
+    id: number,
+    data: {
+      squad_user_ids: number[];
+      lineup_slots: Array<{ slot: string; user_id: number | null }>;
+    }
+  ) => api.put(`/events/${id}/squad`, data),
+
+  releaseMatchSquad: (id: number) => api.post(`/events/${id}/squad/release`),
   
   delete: (id: number, deleteSeries: boolean = false) => 
     api.delete(`/events/${id}${deleteSeries ? '?delete_series=true' : ''}`),

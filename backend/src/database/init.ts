@@ -136,6 +136,18 @@ db.exec(`
     deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- Match squad + tactic board per event
+  CREATE TABLE IF NOT EXISTS event_match_squads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL UNIQUE,
+    squad_user_ids TEXT NOT NULL DEFAULT '[]',
+    lineup_slots TEXT NOT NULL DEFAULT '[]',
+    is_released INTEGER NOT NULL DEFAULT 0,
+    released_at DATETIME,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+  );
+
   -- Team invitations table
   CREATE TABLE IF NOT EXISTS team_invites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -177,6 +189,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_event_responses_event ON event_responses(event_id);
   CREATE INDEX IF NOT EXISTS idx_event_responses_user ON event_responses(user_id);
   CREATE INDEX IF NOT EXISTS idx_deleted_events_team_deleted_at ON deleted_events(team_id, deleted_at);
+  CREATE INDEX IF NOT EXISTS idx_event_match_squads_event ON event_match_squads(event_id);
   CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
   CREATE INDEX IF NOT EXISTS idx_team_invites_team ON team_invites(team_id);
   CREATE INDEX IF NOT EXISTS idx_trainer_invites_token ON trainer_invites(token);
