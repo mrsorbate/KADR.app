@@ -44,6 +44,7 @@ export default function EventCreatePage() {
   });
   const [inviteSelectionModalOpen, setInviteSelectionModalOpen] = useState(false);
   const [rsvpDeadlineOffsetHours, setRsvpDeadlineOffsetHours] = useState('');
+  const [seriesValidationMessage, setSeriesValidationMessage] = useState('');
 
   const durationConfig = { min: 5, step: 5 } as const;
   const arrivalConfig = { min: 0, max: 240, step: 5 } as const;
@@ -414,6 +415,20 @@ export default function EventCreatePage() {
       return;
     }
 
+    const isSeriesEnabled = eventData.repeat_type !== 'none';
+    if (isSeriesEnabled) {
+      if (!eventData.repeat_until) {
+        setSeriesValidationMessage('Bitte wähle, bis wann die Serie erstellt werden soll.');
+        return;
+      }
+      if (eventData.repeat_days.length === 0) {
+        setSeriesValidationMessage('Bitte wähle mindestens einen Wochentag für die Serie.');
+        return;
+      }
+    }
+
+    setSeriesValidationMessage('');
+
     const resolvedLocation = eventData.location_venue || eventData.location_zip_city || eventData.location;
     const dataToSend: any = {
       team_id: effectiveTeamId,
@@ -439,8 +454,8 @@ export default function EventCreatePage() {
       dataToSend.rsvp_deadline = eventData.rsvp_deadline;
     }
 
-    if (eventData.repeat_type !== 'none') {
-      dataToSend.repeat_type = eventData.repeat_type;
+    if (isSeriesEnabled) {
+      dataToSend.repeat_type = 'custom';
       dataToSend.repeat_until = eventData.repeat_until;
       dataToSend.repeat_days = eventData.repeat_days;
     }
@@ -891,38 +906,48 @@ export default function EventCreatePage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Wiederholen</label>
-                  <select
-                    value={eventData.repeat_type}
-                    onChange={(e) => {
-                      const nextRepeatType = e.target.value as 'none' | 'weekly' | 'custom';
-                      const nextRepeatDays = (() => {
-                        if (nextRepeatType === 'none') {
-                          return [];
-                        }
-                        if (nextRepeatType === 'weekly') {
-                          if (eventData.repeat_days.length > 0) {
-                            return eventData.repeat_days;
-                          }
-                          const startDate = new Date(eventData.start_time);
-                          if (!Number.isNaN(startDate.getTime())) {
-                            return [startDate.getDay()];
-                          }
-                          return [1];
-                        }
-                        return eventData.repeat_days;
-                      })();
-
-                      setEventData({ ...eventData, repeat_type: nextRepeatType, repeat_days: nextRepeatDays });
-                    }}
-                    title="Wiederholung auswählen"
-                    aria-label="Wiederholung auswählen"
-                    className="input"
-                  >
-                    <option value="none">Nicht wiederholen</option>
-                    <option value="weekly">Woechentlich</option>
-                    <option value="custom">Bestimmte Wochentage</option>
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Serientermin</label>
+                  <div className="grid grid-cols-2 gap-2" role="group" aria-label="Serientermin ja oder nein">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const startDate = new Date(eventData.start_time);
+                        const fallbackDay = Number.isNaN(startDate.getTime()) ? 1 : startDate.getDay();
+                        setSeriesValidationMessage('');
+                        setEventData((prev) => ({
+                          ...prev,
+                          repeat_type: 'custom',
+                          repeat_days: prev.repeat_days.length > 0 ? prev.repeat_days : [fallbackDay],
+                        }));
+                      }}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        eventData.repeat_type !== 'none'
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      Ja
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSeriesValidationMessage('');
+                        setEventData((prev) => ({
+                          ...prev,
+                          repeat_type: 'none',
+                          repeat_days: [],
+                          repeat_until: '',
+                        }));
+                      }}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        eventData.repeat_type === 'none'
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      Nein
+                    </button>
+                  </div>
                 </div>
 
                 {eventData.repeat_type !== 'none' && (
@@ -946,6 +971,7 @@ export default function EventCreatePage() {
                               const newDays = eventData.repeat_days.includes(day.value)
                                 ? eventData.repeat_days.filter((d) => d !== day.value)
                                 : [...eventData.repeat_days, day.value];
+                              setSeriesValidationMessage('');
                               setEventData({ ...eventData, repeat_days: newDays });
                             }}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -959,9 +985,7 @@ export default function EventCreatePage() {
                         ))}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                        {eventData.repeat_type === 'weekly'
-                          ? 'Wähle die Wochentage aus, an denen der Termin stattfindet'
-                          : 'Wähle alle gewünschten Wochentage'}
+                        Wähle die Wochentage aus, an denen der Termin stattfindet.
                       </p>
                     </div>
 
@@ -969,15 +993,22 @@ export default function EventCreatePage() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Wiederholung endet am *</label>
                       <input
                         type="date"
-                        required={eventData.repeat_type === 'weekly' || eventData.repeat_type === 'custom'}
+                        required
                         value={eventData.repeat_until}
-                        onChange={(e) => setEventData({ ...eventData, repeat_until: e.target.value })}
+                        onChange={(e) => {
+                          setSeriesValidationMessage('');
+                          setEventData({ ...eventData, repeat_until: e.target.value });
+                        }}
                         title="Wiederholungsende auswählen"
                         aria-label="Wiederholungsende auswählen"
                         className="input mt-1"
                       />
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Bis zu welchem Datum sollen die Termine erstellt werden?</p>
                     </div>
+
+                    {seriesValidationMessage ? (
+                      <p className="text-sm text-red-600 dark:text-red-400">{seriesValidationMessage}</p>
+                    ) : null}
                   </>
                 )}
               </div>
