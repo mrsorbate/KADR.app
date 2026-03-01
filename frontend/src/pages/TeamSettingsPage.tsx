@@ -462,7 +462,10 @@ export default function TeamSettingsPage() {
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">Team-Einstellungen</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-2">
+            <Settings className="w-6 h-6 text-primary-600 shrink-0" />
+            <span>Team-Einstellungen</span>
+          </h1>
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">Standardwerte und fussball.de Verknüpfung verwalten</p>
         </div>
       </div>

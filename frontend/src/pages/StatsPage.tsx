@@ -34,7 +34,10 @@ export default function StatsPage() {
         <Link to={`/teams/${teamId}`} className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
           <ArrowLeft className="w-6 h-6" />
         </Link>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Statistiken</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <TrendingUp className="w-6 h-6 text-primary-600 shrink-0" />
+          <span>Statistiken</span>
+        </h1>
       </div>
 
       {/* Event Summary */}

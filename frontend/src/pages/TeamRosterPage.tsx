@@ -54,8 +54,9 @@ export default function TeamRosterPage() {
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words">
-            Trainer &amp; Spieler - {team?.name}
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-2">
+            <Users className="w-6 h-6 text-primary-600 shrink-0" />
+            <span>Trainer &amp; Spieler - {team?.name}</span>
           </h1>
         </div>
       </div>
