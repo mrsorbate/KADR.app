@@ -105,6 +105,13 @@ export default function TeamPage() {
     return '—';
   };
 
+  const asBoolean = (value: unknown): boolean => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value === 1;
+    const normalized = String(value ?? '').trim().toLowerCase();
+    return normalized === 'true' || normalized === '1';
+  };
+
   const isTrainer = members?.find((m: any) => m.id === user?.id)?.role === 'trainer';
 
   const getTeamPhotoUrl = (): string | undefined => {
@@ -247,7 +254,19 @@ export default function TeamPage() {
                         {row.team}
                       </span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{row.points} Pkt</span>
+                    <div className="flex items-center gap-2">
+                      {asBoolean(row.isPromotion) && (
+                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                          Aufstieg
+                        </span>
+                      )}
+                      {asBoolean(row.isRelegation) && (
+                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                          Abstieg
+                        </span>
+                      )}
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{row.points} Pkt</span>
+                    </div>
                   </div>
                   <div className="mt-3 flex items-center text-xs text-gray-600 dark:text-gray-300">
                     <span>Sp: {row.games}</span>
@@ -272,6 +291,7 @@ export default function TeamPage() {
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">S/U/N</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tore</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Dif.</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pkt</th>
                   </tr>
                 </thead>
@@ -303,6 +323,23 @@ export default function TeamPage() {
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{row.won}/{row.draw}/{row.lost}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{row.goal}</td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-300">{formatGoalDifference(row.goal)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                        <div className="flex items-center gap-1.5">
+                          {asBoolean(row.isPromotion) && (
+                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                              Aufstieg
+                            </span>
+                          )}
+                          {asBoolean(row.isRelegation) && (
+                            <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                              Abstieg
+                            </span>
+                          )}
+                          {!asBoolean(row.isPromotion) && !asBoolean(row.isRelegation) && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">{row.points}</td>
                     </tr>
                   ))}
