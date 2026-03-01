@@ -894,7 +894,27 @@ export default function EventCreatePage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Wiederholen</label>
                   <select
                     value={eventData.repeat_type}
-                    onChange={(e) => setEventData({ ...eventData, repeat_type: e.target.value as any, repeat_days: [] })}
+                    onChange={(e) => {
+                      const nextRepeatType = e.target.value as 'none' | 'weekly' | 'custom';
+                      const nextRepeatDays = (() => {
+                        if (nextRepeatType === 'none') {
+                          return [];
+                        }
+                        if (nextRepeatType === 'weekly') {
+                          if (eventData.repeat_days.length > 0) {
+                            return eventData.repeat_days;
+                          }
+                          const startDate = new Date(eventData.start_time);
+                          if (!Number.isNaN(startDate.getTime())) {
+                            return [startDate.getDay()];
+                          }
+                          return [1];
+                        }
+                        return eventData.repeat_days;
+                      })();
+
+                      setEventData({ ...eventData, repeat_type: nextRepeatType, repeat_days: nextRepeatDays });
+                    }}
                     title="Wiederholung auswählen"
                     aria-label="Wiederholung auswählen"
                     className="input"

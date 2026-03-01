@@ -401,8 +401,28 @@ router.post('/', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'At least one invited user is required' });
     }
     
+    const normalizedRepeatDays = Array.isArray(repeat_days)
+      ? [...new Set(repeat_days.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value <= 6))]
+      : [];
+
+    const startDateForSeries = new Date(start_time);
+    const weeklyFallbackDays = Number.isNaN(startDateForSeries.getTime()) ? [] : [startDateForSeries.getDay()];
+    const effectiveRepeatDays =
+      repeat_type === 'weekly'
+        ? (normalizedRepeatDays.length > 0 ? normalizedRepeatDays : weeklyFallbackDays)
+        : normalizedRepeatDays;
+
     // Check if this is a recurring event
-    const isRecurring = repeat_type && repeat_type !== 'none' && repeat_until && repeat_days && repeat_days.length > 0;
+    const isRecurring = Boolean(
+      repeat_type
+      && repeat_type !== 'none'
+      && repeat_until
+      && (
+        repeat_type === 'weekly'
+          ? effectiveRepeatDays.length > 0
+          : effectiveRepeatDays.length > 0
+      )
+    );
     
     if (isRecurring) {
       // Generate series ID
@@ -413,7 +433,7 @@ router.post('/', (req: AuthRequest, res) => {
       const endDate = new Date(resolvedEndTime);
       const untilDate = new Date(repeat_until);
       
-      const eventDates = generateRecurringDates(startDate, endDate, repeat_type!, untilDate, repeat_days);
+      const eventDates = generateRecurringDates(startDate, endDate, repeat_type!, untilDate, effectiveRepeatDays);
       
       if (eventDates.length === 0) {
         return res.status(400).json({ error: 'No valid dates generated for recurring event' });
