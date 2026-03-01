@@ -165,11 +165,23 @@ export default function TeamSettingsPage() {
       default_arrival_minutes_training?: number | null;
       default_arrival_minutes_match?: number | null;
       default_arrival_minutes_other?: number | null;
-      home_venues?: Array<{ name: string; street?: string; zip_city?: string }>;
     }) => teamsAPI.updateSettings(teamId, payload),
     onSuccess: () => {
       invalidateSettingsQueries();
       showToast('Termineinstellungen gespeichert', 'success');
+    },
+    onError: (mutationError: any) => {
+      showToast(mutationError?.response?.data?.error || 'Fehler beim Speichern', 'error');
+    },
+  });
+
+  const updateHomeVenuesMutation = useMutation({
+    mutationFn: (payload: {
+      home_venues: Array<{ name: string; street?: string; zip_city?: string }>;
+    }) => teamsAPI.updateSettings(teamId, payload),
+    onSuccess: () => {
+      invalidateSettingsQueries();
+      showToast('Heimspiel-Plätze gespeichert', 'success');
     },
     onError: (mutationError: any) => {
       showToast(mutationError?.response?.data?.error || 'Fehler beim Speichern', 'error');
@@ -241,7 +253,7 @@ export default function TeamSettingsPage() {
     });
   };
 
-  const saveDefaultSettings = () => {
+  const saveAppointmentSettings = () => {
     const parseArrivalMinutes = (value: string, label: string): number | null | 'invalid' => {
       if (value.trim() === '') {
         return null;
@@ -288,6 +300,20 @@ export default function TeamSettingsPage() {
     const parsedRsvpDeadlineHoursOther = parseCategoryRsvpHours(defaultRsvpDeadlineHoursOther, 'Standard-Rückmeldefrist Sonstiges');
     if (parsedRsvpDeadlineHoursOther === 'invalid') return;
 
+    updateDefaultSettingsMutation.mutate({
+      default_response: defaultResponse,
+      default_rsvp_deadline_hours: parsedRsvpDeadlineHoursTraining,
+      default_rsvp_deadline_hours_training: parsedRsvpDeadlineHoursTraining,
+      default_rsvp_deadline_hours_match: parsedRsvpDeadlineHoursMatch,
+      default_rsvp_deadline_hours_other: parsedRsvpDeadlineHoursOther,
+      default_arrival_minutes: parsedArrivalMinutesTraining,
+      default_arrival_minutes_training: parsedArrivalMinutesTraining,
+      default_arrival_minutes_match: parsedArrivalMinutesMatch,
+      default_arrival_minutes_other: parsedArrivalMinutesTraining,
+    });
+  };
+
+  const saveHomeVenues = () => {
     const normalizedHomeVenues = homeVenues
       .map((venue) => ({
         name: venue.name.trim(),
@@ -302,16 +328,7 @@ export default function TeamSettingsPage() {
       return;
     }
 
-    updateDefaultSettingsMutation.mutate({
-      default_response: defaultResponse,
-      default_rsvp_deadline_hours: parsedRsvpDeadlineHoursTraining,
-      default_rsvp_deadline_hours_training: parsedRsvpDeadlineHoursTraining,
-      default_rsvp_deadline_hours_match: parsedRsvpDeadlineHoursMatch,
-      default_rsvp_deadline_hours_other: parsedRsvpDeadlineHoursOther,
-      default_arrival_minutes: parsedArrivalMinutesTraining,
-      default_arrival_minutes_training: parsedArrivalMinutesTraining,
-      default_arrival_minutes_match: parsedArrivalMinutesMatch,
-      default_arrival_minutes_other: parsedArrivalMinutesTraining,
+    updateHomeVenuesMutation.mutate({
       home_venues: normalizedHomeVenues,
     });
   };
@@ -808,7 +825,7 @@ export default function TeamSettingsPage() {
 
             <button
               type="button"
-              onClick={saveDefaultSettings}
+              onClick={saveAppointmentSettings}
               disabled={updateDefaultSettingsMutation.isPending}
               className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
             >
@@ -881,11 +898,11 @@ export default function TeamSettingsPage() {
 
             <button
               type="button"
-              onClick={saveDefaultSettings}
-              disabled={updateDefaultSettingsMutation.isPending}
+              onClick={saveHomeVenues}
+              disabled={updateHomeVenuesMutation.isPending}
               className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
             >
-              {updateDefaultSettingsMutation.isPending ? 'Speichert...' : 'Heimspiel-Plätze speichern'}
+              {updateHomeVenuesMutation.isPending ? 'Speichert...' : 'Heimspiel-Plätze speichern'}
             </button>
           </div>
         </>
