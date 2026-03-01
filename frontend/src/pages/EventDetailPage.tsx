@@ -308,6 +308,7 @@ export default function EventDetailPage() {
   }
   const locationLabel = locationParts.join(', ');
   const shouldShowAddressBlock = event?.type === 'match' || locationParts.length > 0;
+  const isMatchWithoutAddress = event?.type === 'match' && locationParts.length === 0;
   const hasMeetingInfo = (event?.meeting_point && String(event.meeting_point).trim().length > 0)
     || (event?.arrival_minutes !== null && event?.arrival_minutes !== undefined);
 
@@ -431,7 +432,17 @@ export default function EventDetailPage() {
                   {locationLabel ? (
                     <p className="mt-1 font-semibold text-gray-900 dark:text-white break-words">{locationLabel}</p>
                   ) : (
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Keine Adresse hinterlegt</p>
+                    <div className="mt-1 space-y-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Keine Adresse hinterlegt</p>
+                      {isTrainer && isMatchWithoutAddress && (
+                        <Link
+                          to={`/events/${eventId}/edit`}
+                          className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                        >
+                          Adresse ergänzen
+                        </Link>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -622,7 +633,7 @@ export default function EventDetailPage() {
             className="w-full btn btn-secondary flex items-center justify-center space-x-2"
           >
             <Pencil className="w-5 h-5" />
-            <span>Termin bearbeiten</span>
+            <span>{isMatchWithoutAddress ? 'Adresse ergänzen' : 'Termin bearbeiten'}</span>
           </Link>
           <button
             onClick={() => setDeleteModalOpen(true)}
