@@ -811,7 +811,7 @@ export default function EventEditPage() {
             <button type="submit" className="btn btn-primary w-full" disabled={updateEventMutation.isPending}>
               {updateEventMutation.isPending ? 'Speichern...' : 'Speichern'}
             </button>
-            <Link to={`/events/${eventId}`} className="btn btn-secondary w-full inline-flex items-center justify-start text-left">
+            <Link to={`/events/${eventId}`} className="btn btn-secondary w-full inline-flex items-center justify-center text-center">
               Abbrechen
             </Link>
           </div>
