@@ -1048,64 +1048,64 @@ export default function EventDetailPage() {
                 </div>
               )}
 
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Termin löschen</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                  Dieser Termin ist teil einer Serie. Wie möchtest du vorgehen?
-                </p>
-              </div>
-            </div>
 
-            <div className="space-y-3">
-              <button
-                onClick={() => handleDeleteEvent(false)}
-                disabled={deleteEventMutation.isPending}
-                className="w-full btn btn-secondary"
-              >
-                Nur diesen Termin löschen
-              </button>
-              <button
-                onClick={() => handleDeleteEvent(true)}
-                disabled={deleteEventMutation.isPending}
-                className="w-full btn bg-red-600 text-white hover:bg-red-700"
-              >
-                Gesamte Serie löschen ({event?.series_id ? '?' : '?'})
-              </button>
-              <button
-                onClick={() => setDeleteModalOpen(false)}
-                disabled={deleteEventMutation.isPending}
-                className="w-full btn btn-secondary"
-              >
-                Abbrechen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              {isMatchEvent && (
+                <div className="card">
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Kader & Aufstellung</h2>
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        matchSquad?.is_released === 1
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                      }`}
+                    >
+                      {matchSquad?.is_released === 1 ? 'Freigegeben' : 'Entwurf'}
+                    </span>
+                  </div>
 
-      {/* Simple delete confirmation for non-series events */}
-      {deleteModalOpen && !event?.series_id && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="card max-w-md w-full mx-4">
-            <div className="flex items-start space-x-3 mb-4">
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Termin löschen</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                  Termin "{event?.title}" wirklich löschen? Dies kann nicht rückgängig gemacht werden.
-                </p>
-              </div>
-            </div>
+                  {isMatchSquadLoading ? (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">Kader wird geladen...</p>
+                  ) : canViewMatchSquad ? (
+                    <div className="space-y-4">
+                      {canManageMatchSquad && (
+                        <>
+                          <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                            <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">Kader festlegen</p>
+                            {squadCandidatePlayers.length > 0 ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {squadCandidatePlayers.map((player) => {
+                                  const checked = editableSquadUserIds.includes(player.id);
+                                  return (
+                                    <label
+                                      key={player.id}
+                                      className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-2"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(event) => toggleSquadPlayer(player.id, event.target.checked)}
+                                        className="h-4 w-4"
+                                      />
+                                      <span className="inline-flex items-center gap-2 min-w-0">
+                                        {renderAvatar(player.name, player.profile_picture, 'w-7 h-7')}
+                                        <span className="text-sm text-gray-800 dark:text-gray-200 truncate">{player.name}</span>
+                                      </span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600 dark:text-gray-300">Noch keine Teilnehmer vorhanden.</p>
+                            )}
+                          </div>
 
-            <div className="space-y-3">
-              <button
-                onClick={() => handleDeleteEvent(false)}
-                disabled={deleteEventMutation.isPending}
-                className="w-full btn bg-red-600 text-white hover:bg-red-700"
-              >
-                Löschen
-              </button>
-              <button
-                onClick={() => setDeleteModalOpen(false)}
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <button
+                              type="button"
+                              onClick={() => saveMatchSquad()}
+                              disabled={saveMatchSquadMutation.isPending || releaseMatchSquadMutation.isPending || !squadChanged}
+                              className="btn btn-secondary w-full sm:w-auto"
                 disabled={deleteEventMutation.isPending}
                 className="w-full btn btn-secondary"
               >
