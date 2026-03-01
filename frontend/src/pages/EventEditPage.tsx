@@ -391,17 +391,6 @@ export default function EventEditPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Platzart</label>
               <div className="mt-1 flex flex-wrap gap-2" role="group" aria-label="Platzart auswählen">
-                <button
-                  type="button"
-                  onClick={() => setEventData({ ...eventData, pitch_type: '' })}
-                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                    eventData.pitch_type === ''
-                      ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  Keine
-                </button>
                 {pitchTypeOptions.map((option) => {
                   const isActive = eventData.pitch_type === option.value;
                   return (
