@@ -481,13 +481,12 @@ export default function EventEditPage() {
               Ort & Organisation
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstätte</label>
-              {(eventData.type === 'match' || eventData.type === 'training') && homeVenues.length > 0 && (
+            {(eventData.type === 'match' || eventData.type === 'training') && homeVenues.length > 0 && (
+              <div className="md:col-span-2">
                 <select
                   defaultValue=""
                   onChange={(e) => applyHomeVenueByIndex(e.target.value)}
-                  className="input mt-1"
+                  className="input"
                   title="Ort oder Spielstätte auswählen"
                   aria-label="Ort oder Spielstätte auswählen"
                 >
@@ -498,7 +497,10 @@ export default function EventEditPage() {
                     </option>
                   ))}
                 </select>
-              )}
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstätte</label>
               <input
                 type="text"
                 value={eventData.location_venue}
