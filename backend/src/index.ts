@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import multer from 'multer';
 import path from 'path';
 import helmet from 'helmet';
-import './database/init';
+import db from './database/init';
 import { createRateLimiter } from './middleware/rateLimit';
 import authRoutes from './routes/auth';
 import teamsRoutes from './routes/teams';
@@ -125,7 +125,22 @@ app.get('/', (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  try {
+    db.prepare('SELECT 1 as ok').get();
+    return res.json({
+      status: 'ok',
+      db: 'ok',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('Health DB check failed:', error);
+    return res.status(503).json({
+      status: 'degraded',
+      db: 'error',
+      error: 'database_unavailable',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Routes

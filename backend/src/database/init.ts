@@ -473,5 +473,6 @@ try {
 }
 
 console.log('✅ Database initialized successfully');
+console.log(`📦 Database path: ${dbPath}`);
 
 export default db;
