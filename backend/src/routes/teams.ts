@@ -194,6 +194,13 @@ router.get('/:id/calendar.ics', (req, res) => {
        ORDER BY start_time ASC`
     ).all(teamId) as Array<any>;
 
+    const deletedEvents = db.prepare(
+      `SELECT event_id, title, start_time, end_time, deleted_at
+       FROM deleted_events
+       WHERE team_id = ?
+       ORDER BY deleted_at ASC`
+    ).all(teamId) as Array<any>;
+
     const nowStamp = formatICalDate(new Date().toISOString()) || '19700101T000000Z';
     const lines: string[] = [
       'BEGIN:VCALENDAR',
@@ -229,6 +236,25 @@ router.get('/:id/calendar.ics', (req, res) => {
       if (location) {
         lines.push(`LOCATION:${escapeICalText(location)}`);
       }
+      lines.push('END:VEVENT');
+    }
+
+    for (const deletedEvent of deletedEvents) {
+      const dtStamp = formatICalDate(deletedEvent.deleted_at) || nowStamp;
+      const dtStart = formatICalDate(deletedEvent.start_time);
+      const dtEnd = formatICalDate(deletedEvent.end_time);
+
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:sqadx-team${teamId}-event${deletedEvent.event_id}@sqadx.app`);
+      lines.push(`DTSTAMP:${dtStamp}`);
+      if (dtStart) {
+        lines.push(`DTSTART:${dtStart}`);
+      }
+      if (dtEnd) {
+        lines.push(`DTEND:${dtEnd}`);
+      }
+      lines.push(`SUMMARY:${escapeICalText(deletedEvent.title || 'Termin')}`);
+      lines.push('STATUS:CANCELLED');
       lines.push('END:VEVENT');
     }
 

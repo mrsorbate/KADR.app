@@ -125,6 +125,17 @@ db.exec(`
     UNIQUE(event_id, user_id)
   );
 
+  -- Deleted events tombstones for calendar cancellation sync
+  CREATE TABLE IF NOT EXISTS deleted_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id INTEGER NOT NULL UNIQUE,
+    team_id INTEGER NOT NULL,
+    title TEXT,
+    start_time DATETIME,
+    end_time DATETIME,
+    deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
   -- Team invitations table
   CREATE TABLE IF NOT EXISTS team_invites (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,6 +176,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
   CREATE INDEX IF NOT EXISTS idx_event_responses_event ON event_responses(event_id);
   CREATE INDEX IF NOT EXISTS idx_event_responses_user ON event_responses(user_id);
+  CREATE INDEX IF NOT EXISTS idx_deleted_events_team_deleted_at ON deleted_events(team_id, deleted_at);
   CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
   CREATE INDEX IF NOT EXISTS idx_team_invites_team ON team_invites(team_id);
   CREATE INDEX IF NOT EXISTS idx_trainer_invites_token ON trainer_invites(token);

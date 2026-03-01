@@ -1125,14 +1125,61 @@ router.delete('/:id', (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Only trainers can delete events' });
     }
 
+    const upsertDeletedEventStmt = db.prepare(
+      `INSERT INTO deleted_events (event_id, team_id, title, start_time, end_time, deleted_at)
+       VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(event_id) DO UPDATE SET
+         team_id = excluded.team_id,
+         title = excluded.title,
+         start_time = excluded.start_time,
+         end_time = excluded.end_time,
+         deleted_at = CURRENT_TIMESTAMP`
+    );
+
     // Delete event or entire series
     if (deleteSeries && event.series_id) {
-      // Delete all events in the series
-      const result = db.prepare('DELETE FROM events WHERE series_id = ?').run(event.series_id);
+      const eventsInSeries = db.prepare(
+        'SELECT id, team_id, title, start_time, end_time FROM events WHERE series_id = ?'
+      ).all(event.series_id) as Array<{ id: number; team_id: number; title: string; start_time: string; end_time: string }>;
+
+      const deleteSeriesTx = db.transaction(() => {
+        for (const eventRow of eventsInSeries) {
+          upsertDeletedEventStmt.run(
+            eventRow.id,
+            eventRow.team_id,
+            eventRow.title || null,
+            eventRow.start_time || null,
+            eventRow.end_time || null
+          );
+        }
+
+        return db.prepare('DELETE FROM events WHERE series_id = ?').run(event.series_id);
+      });
+
+      const result = deleteSeriesTx();
       res.json({ success: true, deleted_count: result.changes });
     } else {
-      // Delete single event (cascading deletes will handle event_responses)
-      db.prepare('DELETE FROM events WHERE id = ?').run(eventId);
+      const eventToDelete = db.prepare(
+        'SELECT id, team_id, title, start_time, end_time FROM events WHERE id = ?'
+      ).get(eventId) as { id: number; team_id: number; title: string; start_time: string; end_time: string } | undefined;
+
+      if (!eventToDelete) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+
+      const deleteSingleTx = db.transaction(() => {
+        upsertDeletedEventStmt.run(
+          eventToDelete.id,
+          eventToDelete.team_id,
+          eventToDelete.title || null,
+          eventToDelete.start_time || null,
+          eventToDelete.end_time || null
+        );
+
+        db.prepare('DELETE FROM events WHERE id = ?').run(eventId);
+      });
+
+      deleteSingleTx();
       res.json({ success: true, deleted_count: 1 });
     }
   } catch (error) {
