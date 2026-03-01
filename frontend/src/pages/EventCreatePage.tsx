@@ -706,7 +706,7 @@ export default function EventCreatePage() {
             </div>
           </div>
 
-          <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
+            <div className="card border border-gray-200 dark:border-gray-700">
               <h4 className="font-medium text-gray-900 dark:text-white mb-3">Einstellungen</h4>
 
               <div className="space-y-4">
@@ -754,7 +754,7 @@ export default function EventCreatePage() {
               </div>
           </div>
 
-          <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
+            <div className="card border border-gray-200 dark:border-gray-700">
               <h4 className="font-medium text-gray-900 dark:text-white mb-3">Serientermin</h4>
 
               <div className="space-y-4">
@@ -831,7 +831,7 @@ export default function EventCreatePage() {
               </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="mt-2 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-3">
             <button
               type="submit"
               className="btn btn-primary w-full sm:w-auto"
