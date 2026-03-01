@@ -87,45 +87,6 @@ export default function EventCreatePage() {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
-  const applyRsvpDeadlineOffsetHours = (hoursBefore: number) => {
-    if (!eventData.start_time) {
-      return;
-    }
-    const startDate = new Date(eventData.start_time);
-    if (isNaN(startDate.getTime())) {
-      return;
-    }
-    const normalizedHours = Math.max(0, Math.min(168, hoursBefore));
-    const deadlineDate = new Date(startDate.getTime() - normalizedHours * 60 * 60 * 1000);
-    setEventData((prev) => ({ ...prev, rsvp_deadline: formatLocalDateTime(deadlineDate) }));
-  };
-
-  const getCurrentRsvpDeadlineOffsetHours = (): string => {
-    if (!eventData.start_time || !eventData.rsvp_deadline) {
-      return '';
-    }
-
-    const startDate = new Date(eventData.start_time);
-    const deadlineDate = new Date(eventData.rsvp_deadline);
-    if (isNaN(startDate.getTime()) || isNaN(deadlineDate.getTime())) {
-      return '';
-    }
-
-    const diffMs = startDate.getTime() - deadlineDate.getTime();
-    if (diffMs < 0) {
-      return '0';
-    }
-
-    const diffHours = Math.round(diffMs / (60 * 60 * 1000));
-    return String(Math.min(168, Math.max(0, diffHours)));
-  };
-
-  const stepRsvpDeadlineHours = (delta: number) => {
-    const current = parseInt(getCurrentRsvpDeadlineOffsetHours(), 10);
-    const baseValue = Number.isFinite(current) ? current : 0;
-    applyRsvpDeadlineOffsetHours(baseValue + delta);
-  };
-
   const handleMinutesWheel = (event: React.WheelEvent<HTMLInputElement>, field: 'duration_minutes' | 'arrival_minutes') => {
     event.preventDefault();
     const delta = event.deltaY < 0 ? 5 : -5;
@@ -748,9 +709,9 @@ export default function EventCreatePage() {
                 placeholder="Optionale Details..."
               />
             </div>
+          </div>
 
-            <div className="md:col-span-2 border-t pt-4">
-              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
+          <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
               <h4 className="font-medium text-gray-900 dark:text-white mb-3">Einstellungen</h4>
 
               <div className="space-y-4">
@@ -776,56 +737,13 @@ export default function EventCreatePage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist</label>
-                  <div className="mt-1">
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Stunden vor Termin</label>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => stepRsvpDeadlineHours(-1)}
-                        className="btn btn-secondary px-3"
-                        aria-label="Rückmeldefrist Stunden verringern"
-                      >
-                        −
-                      </button>
-                      <input
-                        type="number"
-                        min={0}
-                        max={168}
-                        step={1}
-                        value={getCurrentRsvpDeadlineOffsetHours()}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value, 10);
-                          if (!Number.isFinite(value)) {
-                            setEventData((prev) => ({ ...prev, rsvp_deadline: '' }));
-                            return;
-                          }
-                          applyRsvpDeadlineOffsetHours(value);
-                        }}
-                        onWheel={(e) => {
-                          e.preventDefault();
-                          const delta = e.deltaY < 0 ? 1 : -1;
-                          stepRsvpDeadlineHours(delta);
-                        }}
-                        className="input text-center"
-                        placeholder="z.B. 24"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => stepRsvpDeadlineHours(1)}
-                        className="btn btn-secondary px-3"
-                        aria-label="Rückmeldefrist Stunden erhöhen"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
                   <input
                     type="datetime-local"
                     value={eventData.rsvp_deadline}
                     onChange={(e) => setEventData({ ...eventData, rsvp_deadline: e.target.value })}
                     title="Rückmeldefrist auswählen"
                     aria-label="Rückmeldefrist auswählen"
-                    className="input mt-2"
+                    className="input mt-1"
                   />
                 </div>
 
@@ -839,12 +757,9 @@ export default function EventCreatePage() {
                   <span className="text-sm text-gray-700 dark:text-gray-300">Teilnehmerliste für alle sichtbar</span>
                 </label>
               </div>
-              </div>
-            </div>
+          </div>
 
-            {/* Repeat Options */}
-            <div className="md:col-span-2 border-t pt-4">
-              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
+          <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
               <h4 className="font-medium text-gray-900 dark:text-white mb-3">Serientermin</h4>
 
               <div className="space-y-4">
@@ -919,8 +834,6 @@ export default function EventCreatePage() {
                   </>
                 )}
               </div>
-              </div>
-            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
