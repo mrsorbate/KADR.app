@@ -385,29 +385,31 @@ export default function EventsPage() {
         </div>
       )}
 
-      <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
-        <button
-          type="button"
-          onClick={() => handleViewChange('upcoming')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-            !isPastView
-              ? 'bg-primary-600 text-white'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
-        >
-          Anstehend
-        </button>
-        <button
-          type="button"
-          onClick={() => handleViewChange('past')}
-          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-            isPastView
-              ? 'bg-primary-600 text-white'
-              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }`}
-        >
-          Vergangen
-        </button>
+      <div className="flex justify-center">
+        <div className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => handleViewChange('upcoming')}
+            className={`min-w-[120px] px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
+              !isPastView
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'
+            }`}
+          >
+            Anstehend
+          </button>
+          <button
+            type="button"
+            onClick={() => handleViewChange('past')}
+            className={`min-w-[120px] px-4 py-1.5 text-sm font-medium rounded-full transition-colors ${
+              isPastView
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700'
+            }`}
+          >
+            Vergangen
+          </button>
+        </div>
       </div>
 
       {/* Events List */}
