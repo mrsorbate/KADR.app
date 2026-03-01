@@ -136,7 +136,12 @@ router.get('/my-upcoming', (req: AuthRequest, res) => {
 // Get all future events for user across all teams
 router.get('/my-all', (req: AuthRequest, res) => {
   try {
+    const { view } = req.query;
     const now = new Date().toISOString();
+    const isPastView = view === 'past';
+
+    const comparator = isPastView ? '<=' : '>=';
+    const orderDirection = isPastView ? 'DESC' : 'ASC';
 
     const events = db.prepare(`
       SELECT e.*, 
@@ -153,8 +158,8 @@ router.get('/my-all', (req: AuthRequest, res) => {
       INNER JOIN users u ON e.created_by = u.id
       INNER JOIN team_members tm ON e.team_id = tm.team_id AND tm.user_id = ?
       LEFT JOIN event_responses er ON er.event_id = e.id AND er.user_id = ?
-      WHERE e.start_time >= ?
-      ORDER BY e.start_time ASC
+      WHERE e.start_time ${comparator} ?
+      ORDER BY e.start_time ${orderDirection}
     `).all(req.user!.id, req.user!.id, now);
 
     res.json(events);
@@ -167,8 +172,9 @@ router.get('/my-all', (req: AuthRequest, res) => {
 // Get events for a team
 router.get('/', (req: AuthRequest, res) => {
   try {
-    const { team_id, from, to } = req.query;
+    const { team_id, from, to, view } = req.query;
     const now = new Date().toISOString();
+    const isPastView = view === 'past';
 
     if (!team_id) {
       return res.status(400).json({ error: 'team_id is required' });
@@ -205,9 +211,6 @@ router.get('/', (req: AuthRequest, res) => {
     if (from) {
       query += ' AND e.start_time >= ?';
       params.push(from);
-    } else if (!to) {
-      query += ' AND e.start_time >= ?';
-      params.push(now);
     }
 
     if (to) {
@@ -215,7 +218,12 @@ router.get('/', (req: AuthRequest, res) => {
       params.push(to);
     }
 
-    query += ' ORDER BY e.start_time ASC';
+    if (!from && !to) {
+      query += isPastView ? ' AND e.start_time <= ?' : ' AND e.start_time >= ?';
+      params.push(now);
+    }
+
+    query += ` ORDER BY e.start_time ${isPastView ? 'DESC' : 'ASC'}`;
 
     const events = db.prepare(query).all(...params);
 

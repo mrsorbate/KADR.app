@@ -106,12 +106,13 @@ export const teamsAPI = {
 export const eventsAPI = {
   getMyUpcoming: () => api.get('/events/my-upcoming'),
 
-  getMyAll: () => api.get('/events/my-all'),
+  getMyAll: (view: 'upcoming' | 'past' = 'upcoming') => api.get(`/events/my-all?view=${view}`),
   
-  getAll: (teamId: number, from?: string, to?: string) => {
+  getAll: (teamId: number, from?: string, to?: string, view: 'upcoming' | 'past' = 'upcoming') => {
     const params = new URLSearchParams({ team_id: teamId.toString() });
     if (from) params.append('from', from);
     if (to) params.append('to', to);
+    params.append('view', view);
     return api.get(`/events?${params}`);
   },
   
@@ -159,6 +160,8 @@ export const eventsAPI = {
     visibility_all?: boolean;
     invite_all?: boolean;
     invited_user_ids?: number[];
+    repeat_until?: string;
+    repeat_days?: number[];
   }, updateSeries: boolean = false) =>
     api.put(`/events/${id}${updateSeries ? '?update_series=true' : ''}`, data),
   

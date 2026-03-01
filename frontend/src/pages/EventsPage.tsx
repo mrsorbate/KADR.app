@@ -7,7 +7,7 @@ import { Calendar, Plus, ArrowLeft, MapPin, Check, X, HelpCircle, Home, Plane, C
 
 export default function EventsPage() {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const teamId = id ? parseInt(id) : null;
   const { user } = useAuthStore();
   const navigate = useNavigate();
@@ -15,6 +15,21 @@ export default function EventsPage() {
   const [openQuickActionsEventId, setOpenQuickActionsEventId] = useState<number | null>(null);
   const isTrainer = user?.role === 'trainer';
   const createdSuccess = searchParams.get('created') === '1';
+  const viewParam = searchParams.get('view');
+  const eventView: 'upcoming' | 'past' = viewParam === 'past' ? 'past' : 'upcoming';
+  const isPastView = eventView === 'past';
+
+  const handleViewChange = (nextView: 'upcoming' | 'past') => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextView === 'past') {
+      nextParams.set('view', 'past');
+    } else {
+      nextParams.delete('view');
+    }
+    nextParams.delete('created');
+    setSearchParams(nextParams, { replace: true });
+    setOpenQuickActionsEventId(null);
+  };
 
   const updateResponseMutation = useMutation({
     mutationFn: (data: { eventId: number; status: string; comment?: string }) =>
@@ -30,13 +45,13 @@ export default function EventsPage() {
 
   // Query all events or team events based on URL param
   const { data: events, isLoading } = useQuery({
-    queryKey: teamId ? ['events', teamId] : ['all-events'],
+    queryKey: teamId ? ['events', teamId, eventView] : ['all-events', eventView],
     queryFn: async () => {
       if (teamId) {
-        const response = await eventsAPI.getAll(teamId);
+        const response = await eventsAPI.getAll(teamId, undefined, undefined, eventView);
         return response.data;
       } else {
-        const response = await eventsAPI.getMyAll();
+        const response = await eventsAPI.getMyAll(eventView);
         return response.data;
       }
     },
@@ -79,6 +94,31 @@ export default function EventsPage() {
           Termin wurde erfolgreich erstellt.
         </div>
       )}
+
+      <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-1">
+        <button
+          type="button"
+          onClick={() => handleViewChange('upcoming')}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            !isPastView
+              ? 'bg-primary-600 text-white'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          Anstehend
+        </button>
+        <button
+          type="button"
+          onClick={() => handleViewChange('past')}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            isPastView
+              ? 'bg-primary-600 text-white'
+              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          Vergangen
+        </button>
+      </div>
 
       {/* Events List */}
       <div className="space-y-3 sm:space-y-4">
@@ -260,6 +300,9 @@ export default function EventsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (isPastView) {
+                          return;
+                        }
                         setOpenQuickActionsEventId((prev) => (prev === event.id ? null : event.id));
                       }}
                       className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition-colors ${
@@ -271,12 +314,12 @@ export default function EventsPage() {
                           ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
                           : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                       } ${
-                        openQuickActionsEventId === event.id
+                        !isPastView && openQuickActionsEventId === event.id
                           ? 'ring-2 ring-primary-400 dark:ring-primary-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-800'
                           : ''
                       }`}
-                      title="Status anzeigen und ändern"
-                      aria-label="Status anzeigen und ändern"
+                      title={isPastView ? 'Status anzeigen' : 'Status anzeigen und ändern'}
+                      aria-label={isPastView ? 'Status anzeigen' : 'Status anzeigen und ändern'}
                     >
                       {event.my_status === 'accepted' ? (
                         <Check className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -289,7 +332,7 @@ export default function EventsPage() {
                       )}
                     </button>
 
-                    {openQuickActionsEventId === event.id && (
+                    {!isPastView && openQuickActionsEventId === event.id && (
                       <div className="absolute right-0 top-12 sm:right-full sm:top-1/2 sm:-translate-y-1/2 sm:mr-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-2 shadow-lg flex items-center gap-2">
                         <button
                           onClick={(e) => {
@@ -347,12 +390,16 @@ export default function EventsPage() {
         {events?.length === 0 && (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             <Calendar className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-            <p className="text-lg font-medium text-gray-900 dark:text-white">Noch keine Termine</p>
+            <p className="text-lg font-medium text-gray-900 dark:text-white">{isPastView ? 'Keine vergangenen Termine' : 'Noch keine Termine'}</p>
             <p className="text-sm mt-2">
-              {teamId ? (
-                isTrainer ? 'Erstelle den ersten Termin!' : 'Warte auf Termine vom Trainer.'
+              {isPastView ? (
+                'Es wurden noch keine vergangenen Termine gefunden.'
               ) : (
-                'Keine zukünftigen Termine anstehend.'
+                teamId ? (
+                  isTrainer ? 'Erstelle den ersten Termin!' : 'Warte auf Termine vom Trainer.'
+                ) : (
+                  'Keine zukünftigen Termine anstehend.'
+                )
               )}
             </p>
           </div>
