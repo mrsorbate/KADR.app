@@ -412,16 +412,14 @@ router.post('/', (req: AuthRequest, res) => {
         ? (normalizedRepeatDays.length > 0 ? normalizedRepeatDays : weeklyFallbackDays)
         : normalizedRepeatDays;
 
+    const repeatUntilValue = typeof repeat_until === 'string' ? repeat_until : '';
+
     // Check if this is a recurring event
     const isRecurring = Boolean(
       repeat_type
       && repeat_type !== 'none'
-      && repeat_until
-      && (
-        repeat_type === 'weekly'
-          ? effectiveRepeatDays.length > 0
-          : effectiveRepeatDays.length > 0
-      )
+      && repeatUntilValue
+      && effectiveRepeatDays.length > 0
     );
     
     if (isRecurring) {
@@ -431,7 +429,7 @@ router.post('/', (req: AuthRequest, res) => {
       // Generate all event dates
       const startDate = new Date(start_time);
       const endDate = new Date(resolvedEndTime);
-      const untilDate = new Date(repeat_until);
+      const untilDate = new Date(repeatUntilValue);
       
       const eventDates = generateRecurringDates(startDate, endDate, repeat_type!, untilDate, effectiveRepeatDays);
       
