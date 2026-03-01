@@ -83,6 +83,7 @@ export const teamsAPI = {
     default_arrival_minutes_training?: number | null;
     default_arrival_minutes_match?: number | null;
     default_arrival_minutes_other?: number | null;
+    home_venues?: Array<{ name: string; street?: string; zip_city?: string }>;
   }) => api.put(`/teams/${id}/settings`, data),
   
   addMember: (id: number, data: { user_id: number; role: string; jersey_number?: number; position?: string }) =>
@@ -250,7 +251,17 @@ export const adminAPI = {
 export const profileAPI = {
   getProfile: () => api.get('/profile/me'),
 
-  updateProfile: (data: { phone_number?: string; nickname?: string }) =>
+  updateProfile: (data: {
+    phone_number?: string;
+    nickname?: string;
+    height_cm?: number | null;
+    weight_kg?: number | null;
+    clothing_size?: string | null;
+    shoe_size?: string | null;
+    jersey_number?: number | null;
+    footedness?: string | null;
+    position?: string | null;
+  }) =>
     api.put('/profile/me', data),
   
   updatePassword: (data: { currentPassword: string; newPassword: string }) =>

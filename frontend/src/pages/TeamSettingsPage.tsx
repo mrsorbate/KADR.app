@@ -24,6 +24,7 @@ export default function TeamSettingsPage() {
   const [defaultRsvpDeadlineHoursOther, setDefaultRsvpDeadlineHoursOther] = useState('');
   const [defaultArrivalMinutesTraining, setDefaultArrivalMinutesTraining] = useState('');
   const [defaultArrivalMinutesMatch, setDefaultArrivalMinutesMatch] = useState('');
+  const [homeVenues, setHomeVenues] = useState<Array<{ name: string; street: string; zip_city: string }>>([]);
 
   const { data: settings, isLoading, error } = useQuery({
     queryKey: ['team-settings', teamId],
@@ -81,6 +82,15 @@ export default function TeamSettingsPage() {
       settings.default_arrival_minutes_match === null || settings.default_arrival_minutes_match === undefined
         ? ''
         : String(settings.default_arrival_minutes_match)
+    );
+    setHomeVenues(
+      Array.isArray(settings.home_venues)
+        ? settings.home_venues.map((venue: any) => ({
+            name: String(venue?.name || ''),
+            street: String(venue?.street || ''),
+            zip_city: String(venue?.zip_city || ''),
+          }))
+        : []
     );
   }, [settings]);
 
@@ -155,6 +165,7 @@ export default function TeamSettingsPage() {
       default_arrival_minutes_training?: number | null;
       default_arrival_minutes_match?: number | null;
       default_arrival_minutes_other?: number | null;
+      home_venues?: Array<{ name: string; street?: string; zip_city?: string }>;
     }) => teamsAPI.updateSettings(teamId, payload),
     onSuccess: () => {
       invalidateSettingsQueries();
@@ -277,6 +288,20 @@ export default function TeamSettingsPage() {
     const parsedRsvpDeadlineHoursOther = parseCategoryRsvpHours(defaultRsvpDeadlineHoursOther, 'Standard-Rückmeldefrist Sonstiges');
     if (parsedRsvpDeadlineHoursOther === 'invalid') return;
 
+    const normalizedHomeVenues = homeVenues
+      .map((venue) => ({
+        name: venue.name.trim(),
+        street: venue.street.trim(),
+        zip_city: venue.zip_city.trim(),
+      }))
+      .filter((venue) => venue.name || venue.street || venue.zip_city);
+
+    const invalidVenue = normalizedHomeVenues.find((venue) => !venue.name);
+    if (invalidVenue) {
+      showToast('Jeder Platz braucht mindestens einen Namen', 'warning');
+      return;
+    }
+
     updateDefaultSettingsMutation.mutate({
       default_response: defaultResponse,
       default_rsvp_deadline_hours: parsedRsvpDeadlineHoursTraining,
@@ -287,7 +312,20 @@ export default function TeamSettingsPage() {
       default_arrival_minutes_training: parsedArrivalMinutesTraining,
       default_arrival_minutes_match: parsedArrivalMinutesMatch,
       default_arrival_minutes_other: parsedArrivalMinutesTraining,
+      home_venues: normalizedHomeVenues,
     });
+  };
+
+  const addHomeVenue = () => {
+    setHomeVenues((prev) => [...prev, { name: '', street: '', zip_city: '' }]);
+  };
+
+  const updateHomeVenue = (index: number, field: 'name' | 'street' | 'zip_city', value: string) => {
+    setHomeVenues((prev) => prev.map((venue, i) => (i === index ? { ...venue, [field]: value } : venue)));
+  };
+
+  const removeHomeVenue = (index: number) => {
+    setHomeVenues((prev) => prev.filter((_, i) => i !== index));
   };
 
   const stepDefaultArrivalMinutes = (field: 'training' | 'match', delta: number) => {
@@ -766,6 +804,64 @@ export default function TeamSettingsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Heimspiel-Plätze
+                </label>
+                <button
+                  type="button"
+                  onClick={addHomeVenue}
+                  className="btn btn-secondary"
+                >
+                  Platz hinzufügen
+                </button>
+              </div>
+
+              {homeVenues.length === 0 ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400">Noch keine Plätze angelegt.</p>
+              ) : (
+                <div className="space-y-3">
+                  {homeVenues.map((venue, index) => (
+                    <div key={index} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <input
+                          type="text"
+                          value={venue.name}
+                          onChange={(e) => updateHomeVenue(index, 'name', e.target.value)}
+                          className="input"
+                          placeholder="Platzname (z. B. Hauptplatz)"
+                        />
+                        <input
+                          type="text"
+                          value={venue.street}
+                          onChange={(e) => updateHomeVenue(index, 'street', e.target.value)}
+                          className="input"
+                          placeholder="Straße"
+                        />
+                        <input
+                          type="text"
+                          value={venue.zip_city}
+                          onChange={(e) => updateHomeVenue(index, 'zip_city', e.target.value)}
+                          className="input"
+                          placeholder="PLZ Ort"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => removeHomeVenue(index)}
+                          className="btn btn-secondary"
+                        >
+                          Entfernen
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <button

@@ -9,6 +9,64 @@ import { CreateTeamDTO } from '../types';
 const router = Router();
 const HARDCODED_FUSSBALL_API_TOKEN = 'w1G797J1N7u8a0e1R0C8A1Z2e5TYQm1Sezgk0lBUik';
 
+type HomeVenue = {
+  name: string;
+  street?: string;
+  zip_city?: string;
+};
+
+const normalizeHomeVenues = (input: unknown): HomeVenue[] => {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const cleaned = input
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') {
+        return null;
+      }
+
+      const source = entry as Record<string, unknown>;
+      const name = String(source.name || '').trim();
+      const street = String(source.street || '').trim();
+      const zipCityRaw = source.zip_city ?? source.zipCity;
+      const zip_city = String(zipCityRaw || '').trim();
+
+      if (!name && !street && !zip_city) {
+        return null;
+      }
+
+      return {
+        name,
+        street: street || undefined,
+        zip_city: zip_city || undefined,
+      };
+    })
+    .filter(Boolean) as HomeVenue[];
+
+  return cleaned
+    .filter((venue) => venue.name.length > 0)
+    .slice(0, 20)
+    .map((venue) => ({
+      name: venue.name.slice(0, 120),
+      street: venue.street?.slice(0, 200),
+      zip_city: venue.zip_city?.slice(0, 120),
+    }));
+};
+
+const parseHomeVenuesFromDb = (rawValue: unknown): HomeVenue[] => {
+  if (!rawValue || typeof rawValue !== 'string') {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    return normalizeHomeVenues(parsed);
+  } catch {
+    return [];
+  }
+};
+
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -108,15 +166,19 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
     const settings = db.prepare(
       `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
-              default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other
+              default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
+              home_venues
        FROM teams WHERE id = ?`
-    ).get(teamId);
+    ).get(teamId) as any;
 
     if (!settings) {
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    return res.json(settings);
+    return res.json({
+      ...settings,
+      home_venues: parseHomeVenuesFromDb(settings.home_venues),
+    });
   } catch (error) {
     console.error('Get team settings error:', error);
     return res.status(500).json({ error: 'Failed to fetch team settings' });
@@ -138,6 +200,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     const hasDefaultArrivalMinutesTraining = Object.prototype.hasOwnProperty.call(req.body, 'default_arrival_minutes_training');
     const hasDefaultArrivalMinutesMatch = Object.prototype.hasOwnProperty.call(req.body, 'default_arrival_minutes_match');
     const hasDefaultArrivalMinutesOther = Object.prototype.hasOwnProperty.call(req.body, 'default_arrival_minutes_other');
+    const hasHomeVenues = Object.prototype.hasOwnProperty.call(req.body, 'home_venues');
 
     const {
       fussballde_id,
@@ -151,6 +214,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_arrival_minutes_training,
       default_arrival_minutes_match,
       default_arrival_minutes_other,
+      home_venues,
     } = req.body as {
       fussballde_id?: string;
       fussballde_team_name?: string;
@@ -163,6 +227,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       default_arrival_minutes_training?: number | string | null;
       default_arrival_minutes_match?: number | string | null;
       default_arrival_minutes_other?: number | string | null;
+      home_venues?: Array<{ name: string; street?: string; zip_city?: string }>;
     };
 
     const membership = db.prepare(
@@ -176,7 +241,8 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
     const team = db.prepare(
             `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
-              default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other
+              default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
+              home_venues
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
     if (!team) {
@@ -308,6 +374,11 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultArrivalMinutesOther = normalized;
     }
 
+    let nextHomeVenues = parseHomeVenuesFromDb(team.home_venues);
+    if (hasHomeVenues) {
+      nextHomeVenues = normalizeHomeVenues(home_venues);
+    }
+
     db.prepare(
       `UPDATE teams
        SET fussballde_id = ?,
@@ -321,6 +392,7 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
              default_arrival_minutes_training = ?,
              default_arrival_minutes_match = ?,
              default_arrival_minutes_other = ?,
+           home_venues = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     ).run(
@@ -335,17 +407,22 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       nextDefaultArrivalMinutesTraining,
       nextDefaultArrivalMinutesMatch,
       nextDefaultArrivalMinutesOther,
+      JSON.stringify(nextHomeVenues),
       teamId
     );
 
     const updatedSettings = db.prepare(
       `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
-              default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other
+              default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
+              home_venues
        FROM teams WHERE id = ?`
-    ).get(teamId);
+    ).get(teamId) as any;
 
-    return res.json(updatedSettings);
+    return res.json({
+      ...updatedSettings,
+      home_venues: parseHomeVenuesFromDb(updatedSettings.home_venues),
+    });
   } catch (error) {
     console.error('Update team settings error:', error);
     return res.status(500).json({ error: 'Failed to update team settings' });

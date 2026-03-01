@@ -227,6 +227,24 @@ export default function EventCreatePage() {
     retry: false,
   });
 
+  const homeVenues = Array.isArray(teamSettings?.home_venues)
+    ? teamSettings.home_venues.filter((venue: any) => venue && typeof venue === 'object' && String(venue.name || '').trim())
+    : [];
+
+  const applyHomeVenueByIndex = (indexValue: string) => {
+    const index = parseInt(indexValue, 10);
+    if (!Number.isFinite(index) || index < 0 || index >= homeVenues.length) {
+      return;
+    }
+    const selectedVenue = homeVenues[index];
+    setEventData((prev) => ({
+      ...prev,
+      location_venue: String(selectedVenue?.name || ''),
+      location_street: String(selectedVenue?.street || ''),
+      location_zip_city: String(selectedVenue?.zip_city || ''),
+    }));
+  };
+
   useEffect(() => {
     if (!eventData.start_time || !eventData.duration_minutes) {
       return;
@@ -515,6 +533,22 @@ export default function EventCreatePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Ort oder Spielstaette</label>
+              {eventData.type === 'match' && homeVenues.length > 0 && (
+                <select
+                  defaultValue=""
+                  onChange={(e) => applyHomeVenueByIndex(e.target.value)}
+                  className="input mt-1"
+                  title="Heimspiel-Platz auswählen"
+                  aria-label="Heimspiel-Platz auswählen"
+                >
+                  <option value="">Heimspiel-Platz auswählen</option>
+                  {homeVenues.map((venue: any, index: number) => (
+                    <option key={`${venue.name}-${index}`} value={index}>
+                      {venue.name}
+                    </option>
+                  ))}
+                </select>
+              )}
               <input
                 type="text"
                 value={eventData.location_venue}

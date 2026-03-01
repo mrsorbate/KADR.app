@@ -29,6 +29,13 @@ db.exec(`
     password TEXT NOT NULL,
     name TEXT NOT NULL,
     nickname TEXT,
+    height_cm INTEGER,
+    weight_kg INTEGER,
+    clothing_size TEXT,
+    shoe_size TEXT,
+    jersey_number INTEGER,
+    footedness TEXT,
+    position TEXT,
     role TEXT NOT NULL CHECK(role IN ('admin', 'trainer', 'player')),
     is_registered INTEGER NOT NULL DEFAULT 1,
     profile_picture TEXT,
@@ -52,6 +59,7 @@ db.exec(`
     default_arrival_minutes_training INTEGER,
     default_arrival_minutes_match INTEGER,
     default_arrival_minutes_other INTEGER,
+    home_venues TEXT,
     created_by INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -237,6 +245,22 @@ try {
     console.log('✅ Added nickname column to users table');
   }
 
+  const addUserColumn = (name: string, sqlType: string) => {
+    const exists = columns.some((col) => col.name === name);
+    if (!exists) {
+      db.exec(`ALTER TABLE users ADD COLUMN ${name} ${sqlType}`);
+      console.log(`✅ Added ${name} column to users table`);
+    }
+  };
+
+  addUserColumn('height_cm', 'INTEGER');
+  addUserColumn('weight_kg', 'INTEGER');
+  addUserColumn('clothing_size', 'TEXT');
+  addUserColumn('shoe_size', 'TEXT');
+  addUserColumn('jersey_number', 'INTEGER');
+  addUserColumn('footedness', 'TEXT');
+  addUserColumn('position', 'TEXT');
+
   const hasIsRegistered = columns.some((col) => col.name === 'is_registered');
   if (!hasIsRegistered) {
     db.exec('ALTER TABLE users ADD COLUMN is_registered INTEGER NOT NULL DEFAULT 1');
@@ -362,6 +386,13 @@ try {
     db.exec('ALTER TABLE teams ADD COLUMN default_arrival_minutes_other INTEGER');
     db.exec('UPDATE teams SET default_arrival_minutes_other = default_arrival_minutes WHERE default_arrival_minutes_other IS NULL');
     console.log('✅ Added default_arrival_minutes_other column to teams table');
+  }
+
+  const hasHomeVenues = teamColumns.some((col) => col.name === 'home_venues');
+  if (!hasHomeVenues) {
+    db.exec('ALTER TABLE teams ADD COLUMN home_venues TEXT');
+    db.exec("UPDATE teams SET home_venues = '[]' WHERE home_venues IS NULL");
+    console.log('✅ Added home_venues column to teams table');
   }
 
   const hasFussballdeTeamName = teamColumns.some((col) => col.name === 'fussballde_team_name');
