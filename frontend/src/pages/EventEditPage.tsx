@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CalendarDays, MapPin, Settings2 } from 'lucide-react';
+import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2 } from 'lucide-react';
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
@@ -34,7 +34,7 @@ export default function EventEditPage() {
     invited_user_ids: [] as number[],
   });
   const [inviteSelectionModalOpen, setInviteSelectionModalOpen] = useState(false);
-  const [seriesSaveModalOpen, setSeriesSaveModalOpen] = useState(false);
+  const [saveWholeSeries, setSaveWholeSeries] = useState(false);
 
   const durationConfig = { min: 5, step: 5 } as const;
   const arrivalConfig = { min: 0, max: 240, step: 5 } as const;
@@ -418,11 +418,7 @@ export default function EventEditPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (event?.series_id) {
-      setSeriesSaveModalOpen(true);
-      return;
-    }
-    submitUpdate(false);
+    submitUpdate(Boolean(event?.series_id) && saveWholeSeries);
   };
 
   const openInviteSelectionModal = () => {
@@ -816,6 +812,45 @@ export default function EventEditPage() {
               </div>
           </div>
 
+          {event?.series_id ? (
+            <div className="card space-y-4">
+              <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-primary-600" />
+                Serientermin
+              </h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ganze Serie speichern</label>
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Ganze Serie speichern ja oder nein">
+                  <button
+                    type="button"
+                    onClick={() => setSaveWholeSeries(true)}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      saveWholeSeries
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Ja
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSaveWholeSeries(false)}
+                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      !saveWholeSeries
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    Nein
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Bei „Ja“ werden die Änderungen auf alle Termine der Serie angewendet.
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-2 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-3">
             <button type="submit" className="btn btn-primary w-full" disabled={updateEventMutation.isPending}>
               {updateEventMutation.isPending ? 'Speichern...' : 'Speichern'}
@@ -908,50 +943,6 @@ export default function EventEditPage() {
                 disabled={eventData.invited_user_ids.length === 0}
               >
                 Übernehmen
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {seriesSaveModalOpen && event?.series_id ? (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="card max-w-md w-full">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Terminserie bearbeiten</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-4">
-              Dieser Termin gehört zu einer Serie. Was möchtest du speichern?
-            </p>
-
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setSeriesSaveModalOpen(false);
-                  submitUpdate(false);
-                }}
-                disabled={updateEventMutation.isPending}
-                className="w-full btn btn-secondary"
-              >
-                Nur diesen Termin speichern
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSeriesSaveModalOpen(false);
-                  submitUpdate(true);
-                }}
-                disabled={updateEventMutation.isPending}
-                className="w-full btn btn-primary"
-              >
-                Ganze Serie speichern
-              </button>
-              <button
-                type="button"
-                onClick={() => setSeriesSaveModalOpen(false)}
-                disabled={updateEventMutation.isPending}
-                className="w-full btn btn-secondary"
-              >
-                Abbrechen
               </button>
             </div>
           </div>
