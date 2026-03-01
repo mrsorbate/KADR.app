@@ -31,6 +31,7 @@ export default function TeamRosterPage() {
 
   const trainers = members?.filter((m: any) => m.role === 'trainer') || [];
   const players = members?.filter((m: any) => m.role !== 'trainer') || [];
+  const canOpenPlayerProfiles = user?.role === 'trainer' || user?.role === 'admin';
 
   const renderInfoCard = (label: string, value: string, extraClassName = '') => (
     <div className={`rounded-lg bg-gray-50 dark:bg-gray-800 p-3 ${extraClassName}`}>
@@ -108,8 +109,14 @@ export default function TeamRosterPage() {
             {players.map((player: any) => (
               <button
                 key={player.id}
-                onClick={() => setSelectedMember(player)}
-                className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer text-left"
+                onClick={canOpenPlayerProfiles ? () => setSelectedMember(player) : undefined}
+                disabled={!canOpenPlayerProfiles}
+                className={`p-3 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center space-x-3 transition-colors text-left ${
+                  canOpenPlayerProfiles
+                    ? 'hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer'
+                    : 'opacity-75 cursor-default'
+                }`}
+                aria-disabled={!canOpenPlayerProfiles}
               >
                 {resolveAssetUrl(player.profile_picture) ? (
                   <img
