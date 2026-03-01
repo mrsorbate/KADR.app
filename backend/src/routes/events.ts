@@ -101,6 +101,33 @@ function parseRepeatUntilDate(value: string): Date {
   return date;
 }
 
+function hasMatchingPitchTypeInHomeVenues(homeVenuesRaw: unknown, selectedPitchTypeRaw: unknown): boolean {
+  const selectedPitchType = String(selectedPitchTypeRaw || '').trim().toLowerCase();
+  if (!selectedPitchType) {
+    return true;
+  }
+
+  let parsedHomeVenues: any[] = [];
+
+  if (Array.isArray(homeVenuesRaw)) {
+    parsedHomeVenues = homeVenuesRaw;
+  } else if (typeof homeVenuesRaw === 'string' && homeVenuesRaw.trim()) {
+    try {
+      const parsed = JSON.parse(homeVenuesRaw);
+      if (Array.isArray(parsed)) {
+        parsedHomeVenues = parsed;
+      }
+    } catch {
+      parsedHomeVenues = [];
+    }
+  }
+
+  return parsedHomeVenues.some((venue) => {
+    const venuePitchType = String(venue?.pitch_type || '').trim().toLowerCase();
+    return venuePitchType === selectedPitchType;
+  });
+}
+
 // Get upcoming events for user (next 6 events)
 router.get('/my-upcoming', (req: AuthRequest, res) => {
   try {
@@ -361,9 +388,14 @@ router.post('/', (req: AuthRequest, res) => {
     const teamSettings = db.prepare(
       `SELECT default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
-              default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other
+              default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
+              home_venues
        FROM teams WHERE id = ?`
     ).get(team_id) as any;
+
+    if (!hasMatchingPitchTypeInHomeVenues(teamSettings?.home_venues, pitch_type)) {
+      return res.status(400).json({ error: `Für die Platzart "${String(pitch_type || '').trim()}" ist kein Heimspiel-Platz hinterlegt` });
+    }
 
     const validDefaultStatuses = new Set(['pending', 'accepted', 'tentative', 'declined']);
     const defaultResponseStatus = validDefaultStatuses.has(teamSettings?.default_response)
@@ -727,7 +759,12 @@ router.put('/:id', (req: AuthRequest, res) => {
        WHERE id = ?`
     );
 
-    const teamSettings = db.prepare('SELECT default_response FROM teams WHERE id = ?').get(event.team_id) as { default_response?: string } | undefined;
+    const teamSettings = db.prepare('SELECT default_response, home_venues FROM teams WHERE id = ?').get(event.team_id) as { default_response?: string; home_venues?: unknown } | undefined;
+
+    if (!hasMatchingPitchTypeInHomeVenues(teamSettings?.home_venues, pitch_type)) {
+      return res.status(400).json({ error: `Für die Platzart "${String(pitch_type || '').trim()}" ist kein Heimspiel-Platz hinterlegt` });
+    }
+
     const validStatuses = new Set(['pending', 'accepted', 'tentative', 'declined']);
     const defaultResponseStatus = validStatuses.has(String(teamSettings?.default_response || 'pending'))
       ? String(teamSettings?.default_response || 'pending')

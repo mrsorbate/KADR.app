@@ -5,6 +5,7 @@ import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { ArrowLeft, CalendarDays, MapPin, Settings2, Repeat } from 'lucide-react';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
+import { useToast } from '../lib/useToast';
 
 export default function EventCreatePage() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +15,7 @@ export default function EventCreatePage() {
   const initialTeamId = teamIdFromParam ?? teamIdFromQuery;
 
   const { user } = useAuthStore();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -402,6 +404,9 @@ export default function EventCreatePage() {
       queryClient.invalidateQueries({ queryKey: ['all-events'] });
       navigate(effectiveTeamId ? `/teams/${effectiveTeamId}/events?created=1` : '/events?created=1');
     },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Termin konnte nicht gespeichert werden', 'error');
+    },
   });
 
   const handleCreateEvent = (e: React.FormEvent) => {
@@ -428,6 +433,17 @@ export default function EventCreatePage() {
     }
 
     setSeriesValidationMessage('');
+
+    const selectedPitchType = String(eventData.pitch_type || '').trim().toLowerCase();
+    if (selectedPitchType) {
+      const hasMatchingVenue = homeVenues.some(
+        (venue: any) => String(venue?.pitch_type || '').trim().toLowerCase() === selectedPitchType
+      );
+      if (!hasMatchingVenue) {
+        showToast(`Für die Platzart "${eventData.pitch_type}" ist kein Heimspiel-Platz hinterlegt`, 'warning');
+        return;
+      }
+    }
 
     const resolvedLocation = eventData.location_venue || eventData.location_zip_city || eventData.location;
     const dataToSend: any = {

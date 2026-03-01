@@ -5,11 +5,13 @@ import { ArrowLeft, CalendarDays, MapPin, Repeat, Settings2 } from 'lucide-react
 import { eventsAPI, teamsAPI } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { resolveAssetUrl, stepNumberFieldValue } from '../lib/utils';
+import { useToast } from '../lib/useToast';
 
 export default function EventEditPage() {
   const { id } = useParams<{ id: string }>();
   const eventId = id ? parseInt(id, 10) : NaN;
   const { user } = useAuthStore();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -35,6 +37,9 @@ export default function EventEditPage() {
   });
   const [inviteSelectionModalOpen, setInviteSelectionModalOpen] = useState(false);
   const [saveWholeSeries, setSaveWholeSeries] = useState(false);
+  const [seriesRepeatUntil, setSeriesRepeatUntil] = useState('');
+  const [seriesRepeatDays, setSeriesRepeatDays] = useState<number[]>([]);
+  const [seriesValidationMessage, setSeriesValidationMessage] = useState('');
 
   const durationConfig = { min: 5, step: 5 } as const;
   const arrivalConfig = { min: 0, max: 240, step: 5 } as const;
@@ -300,6 +305,42 @@ export default function EventEditPage() {
       invite_all: event.invite_all === 1 || event.invite_all === true,
       invited_user_ids: invitedUserIds,
     });
+
+    const parsedRepeatDays = (() => {
+      const rawValue = (event as any)?.repeat_days;
+      if (Array.isArray(rawValue)) {
+        return [...new Set(rawValue.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value <= 6))];
+      }
+      if (typeof rawValue === 'string' && rawValue.trim()) {
+        try {
+          const parsed = JSON.parse(rawValue);
+          if (Array.isArray(parsed)) {
+            return [...new Set(parsed.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value <= 6))];
+          }
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    })();
+
+    const fallbackDay = (() => {
+      const startDate = new Date(event.start_time);
+      return Number.isNaN(startDate.getTime()) ? 1 : startDate.getDay();
+    })();
+
+    const repeatUntilFromEvent = (() => {
+      const rawValue = String((event as any)?.repeat_until || '').trim();
+      if (!rawValue) {
+        return '';
+      }
+      return rawValue.length >= 10 ? rawValue.slice(0, 10) : rawValue;
+    })();
+
+    setSeriesRepeatDays(parsedRepeatDays.length > 0 ? parsedRepeatDays : [fallbackDay]);
+    setSeriesRepeatUntil(repeatUntilFromEvent);
+    setSaveWholeSeries(false);
+    setSeriesValidationMessage('');
   }, [event]);
 
   useEffect(() => {
@@ -385,14 +426,45 @@ export default function EventEditPage() {
   const updateEventMutation = useMutation({
     mutationFn: ({ data, updateSeries }: { data: any; updateSeries: boolean }) =>
       eventsAPI.update(eventId, data, updateSeries),
-    onSuccess: () => {
+    onSuccess: (_response, variables) => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      if (variables.updateSeries && event?.team_id) {
+        navigate(`/teams/${event.team_id}/events`);
+        return;
+      }
       navigate(`/events/${eventId}`);
+    },
+    onError: (error: any) => {
+      showToast(error?.response?.data?.error || 'Termin konnte nicht gespeichert werden', 'error');
     },
   });
 
   const submitUpdate = (updateSeries: boolean) => {
+    if (updateSeries) {
+      if (!seriesRepeatUntil) {
+        setSeriesValidationMessage('Bitte wähle, bis wann die Serie gespeichert werden soll.');
+        return;
+      }
+      if (seriesRepeatDays.length === 0) {
+        setSeriesValidationMessage('Bitte wähle mindestens einen Wochentag für die Serie.');
+        return;
+      }
+    }
+
+    setSeriesValidationMessage('');
+
+    const selectedPitchType = String(eventData.pitch_type || '').trim().toLowerCase();
+    if (selectedPitchType) {
+      const hasMatchingVenue = homeVenues.some(
+        (venue: any) => String(venue?.pitch_type || '').trim().toLowerCase() === selectedPitchType
+      );
+      if (!hasMatchingVenue) {
+        showToast(`Für die Platzart "${eventData.pitch_type}" ist kein Heimspiel-Platz hinterlegt`, 'warning');
+        return;
+      }
+    }
+
     const dataToSend = {
       title: eventData.title,
       type: eventData.type,
@@ -411,6 +483,8 @@ export default function EventEditPage() {
       visibility_all: eventData.visibility_all,
       invite_all: eventData.invite_all,
       invited_user_ids: eventData.invited_user_ids,
+      repeat_until: updateSeries ? seriesRepeatUntil : undefined,
+      repeat_days: updateSeries ? [...new Set(seriesRepeatDays)].sort((a, b) => a - b) : undefined,
     };
 
     updateEventMutation.mutate({ data: dataToSend, updateSeries });
@@ -818,35 +892,105 @@ export default function EventEditPage() {
                 <Repeat className="w-4 h-4 text-primary-600" />
                 Serientermin
               </h4>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ganze Serie speichern</label>
-                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Ganze Serie speichern ja oder nein">
-                  <button
-                    type="button"
-                    onClick={() => setSaveWholeSeries(true)}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                      saveWholeSeries
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Ja
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSaveWholeSeries(false)}
-                    className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
-                      !saveWholeSeries
-                        ? 'bg-primary-600 text-white border-primary-600'
-                        : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    Nein
-                  </button>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ganze Serie speichern</label>
+                  <div className="grid grid-cols-2 gap-2" role="group" aria-label="Ganze Serie speichern ja oder nein">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSaveWholeSeries(true);
+                        setSeriesValidationMessage('');
+                      }}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        saveWholeSeries
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      Ja
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSaveWholeSeries(false);
+                        setSeriesValidationMessage('');
+                      }}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                        !saveWholeSeries
+                          ? 'bg-primary-600 text-white border-primary-600'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      Nein
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  Bei „Ja“ werden die Änderungen auf alle Termine der Serie angewendet.
-                </p>
+
+                {saveWholeSeries ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Wochentage auswählen</label>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: 1, label: 'Mo' },
+                          { value: 2, label: 'Di' },
+                          { value: 3, label: 'Mi' },
+                          { value: 4, label: 'Do' },
+                          { value: 5, label: 'Fr' },
+                          { value: 6, label: 'Sa' },
+                          { value: 0, label: 'So' },
+                        ].map((day) => (
+                          <button
+                            key={day.value}
+                            type="button"
+                            onClick={() => {
+                              setSeriesValidationMessage('');
+                              setSeriesRepeatDays((prev) => (
+                                prev.includes(day.value)
+                                  ? prev.filter((value) => value !== day.value)
+                                  : [...prev, day.value]
+                              ));
+                            }}
+                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                              seriesRepeatDays.includes(day.value)
+                                ? 'bg-primary-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
+                            }`}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Wiederholung endet am *</label>
+                      <input
+                        type="date"
+                        required={saveWholeSeries}
+                        value={seriesRepeatUntil}
+                        onChange={(e) => {
+                          setSeriesValidationMessage('');
+                          setSeriesRepeatUntil(e.target.value);
+                        }}
+                        title="Wiederholungsende auswählen"
+                        aria-label="Wiederholungsende auswählen"
+                        className="input mt-1"
+                      />
+                    </div>
+
+                    {seriesValidationMessage ? (
+                      <p className="text-sm text-red-600 dark:text-red-400">{seriesValidationMessage}</p>
+                    ) : null}
+                  </>
+                ) : null}
+
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Ganze Serie speichern ja oder nein">
+                  <div className="col-span-2 text-xs text-gray-500 dark:text-gray-400">
+                    Bei „Ja“ werden die Änderungen auf die komplette Serie mit den gewählten Wochentagen bis zum Enddatum angewendet.
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}
