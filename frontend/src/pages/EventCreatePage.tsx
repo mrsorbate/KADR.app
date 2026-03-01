@@ -477,7 +477,7 @@ export default function EventCreatePage() {
                     ))
                   ) : (
                     <option value="" disabled>
-                      Keine Teams verfuegbar
+                      Keine Teams verfügbar
                     </option>
                   )}
                 </select>
@@ -520,7 +520,7 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Beginn *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beginn *</label>
               <input
                 type="datetime-local"
                 required
@@ -533,7 +533,7 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Dauer (Minuten) *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Dauer (Minuten) *</label>
               <div className="mt-1 flex items-center gap-2">
                 <button
                   type="button"
@@ -564,12 +564,12 @@ export default function EventCreatePage() {
                 </button>
               </div>
               {eventData.end_time && (
-                <p className="text-xs text-gray-500 mt-1">Ende: {eventData.end_time.replace('T', ' ')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ende: {eventData.end_time.replace('T', ' ')}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Ort oder Spielstaette</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Ort oder Spielstätte</label>
               {eventData.type === 'match' && homeVenues.length > 0 && (
                 <select
                   defaultValue=""
@@ -596,7 +596,7 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Strasse</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Straße</label>
               <input
                 type="text"
                 value={eventData.location_street}
@@ -607,7 +607,7 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">PLZ Ort</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">PLZ Ort</label>
               <input
                 type="text"
                 value={eventData.location_zip_city}
@@ -618,7 +618,7 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Platzart</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Platzart</label>
               <div className="mt-1 flex flex-wrap gap-2" role="group" aria-label="Platzart auswählen">
                 <button
                   type="button"
@@ -652,7 +652,7 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Treffpunkt</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Treffpunkt</label>
               <input
                 type="text"
                 value={eventData.meeting_point}
@@ -664,7 +664,7 @@ export default function EventCreatePage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700">X Minuten vor dem Termin</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">X Minuten vor dem Termin</label>
                 <button
                   type="button"
                   onClick={() => {
@@ -710,7 +710,7 @@ export default function EventCreatePage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Optionale Beschreibung</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Optionale Beschreibung</label>
               <textarea
                 value={eventData.description}
                 onChange={(e) => setEventData({ ...eventData, description: e.target.value })}
@@ -721,7 +721,8 @@ export default function EventCreatePage() {
             </div>
 
             <div className="md:col-span-2 border-t pt-4">
-              <h4 className="font-medium text-gray-900 mb-3">Einstellungen</h4>
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Einstellungen</h4>
 
               <div className="space-y-4">
                 <label className="flex items-center space-x-3">
@@ -739,17 +740,17 @@ export default function EventCreatePage() {
                     }}
                     className="h-4 w-4 text-primary-600"
                   />
-                  <span className="text-sm text-gray-700">Alle Teammitglieder einladen</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Alle Teammitglieder einladen</span>
                 </label>
 
                 {membersForCreate?.length ? (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Einladungen anpassen</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Einladungen anpassen</label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {membersForCreate.map((member: any) => {
                         const isChecked = eventData.invited_user_ids.includes(member.id);
                         return (
-                          <label key={member.id} className="flex items-center space-x-2 text-sm text-gray-700">
+                          <label key={member.id} className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
                             <input
                               type="checkbox"
                               checked={isChecked}
@@ -770,9 +771,9 @@ export default function EventCreatePage() {
                 ) : null}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Rueckmeldefrist</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rückmeldefrist</label>
                   <div className="mt-1">
-                    <label className="block text-xs text-gray-500 mb-1">Stunden vor Termin</label>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Stunden vor Termin</label>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
@@ -831,18 +832,20 @@ export default function EventCreatePage() {
                     onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
                     className="h-4 w-4 text-primary-600"
                   />
-                  <span className="text-sm text-gray-700">Teilnehmerliste fuer alle sichtbar</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Teilnehmerliste für alle sichtbar</span>
                 </label>
+              </div>
               </div>
             </div>
 
             {/* Repeat Options */}
             <div className="md:col-span-2 border-t pt-4">
-              <h4 className="font-medium text-gray-900 mb-3">Serientermin</h4>
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-4">
+              <h4 className="font-medium text-gray-900 dark:text-white mb-3">Serientermin</h4>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Wiederholen</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Wiederholen</label>
                   <select
                     value={eventData.repeat_type}
                     onChange={(e) => setEventData({ ...eventData, repeat_type: e.target.value as any, repeat_days: [] })}
@@ -859,7 +862,7 @@ export default function EventCreatePage() {
                 {eventData.repeat_type !== 'none' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Wochentage auswaehlen</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Wochentage auswählen</label>
                       <div className="flex flex-wrap gap-2">
                         {[
                           { value: 1, label: 'Mo' },
@@ -882,22 +885,22 @@ export default function EventCreatePage() {
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                               eventData.repeat_days.includes(day.value)
                                 ? 'bg-primary-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
                             }`}
                           >
                             {day.label}
                           </button>
                         ))}
                       </div>
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                         {eventData.repeat_type === 'weekly'
-                          ? 'Waehlte die Wochentage aus, an denen der Termin stattfindet'
-                          : 'Waehlte alle gewuenschten Wochentage'}
+                          ? 'Wähle die Wochentage aus, an denen der Termin stattfindet'
+                          : 'Wähle alle gewünschten Wochentage'}
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Wiederholung endet am *</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Wiederholung endet am *</label>
                       <input
                         type="date"
                         required={eventData.repeat_type === 'weekly' || eventData.repeat_type === 'custom'}
@@ -907,10 +910,11 @@ export default function EventCreatePage() {
                         aria-label="Wiederholungsende auswählen"
                         className="input mt-1"
                       />
-                      <p className="text-xs text-gray-500 mt-1">Bis zu welchem Datum sollen die Termine erstellt werden?</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Bis zu welchem Datum sollen die Termine erstellt werden?</p>
                     </div>
                   </>
                 )}
+              </div>
               </div>
             </div>
           </div>
