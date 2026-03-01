@@ -360,10 +360,9 @@ export default function EventEditPage() {
         <h1 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white">Termin bearbeiten</h1>
       </div>
 
-      <div className="card">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="card border border-gray-200 dark:border-gray-700">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+      <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="card space-y-4">
+            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-primary-600" />
               Termin
             </h4>
@@ -476,8 +475,8 @@ export default function EventEditPage() {
             </div>
           </div>
 
-          <div className="card border border-gray-200 dark:border-gray-700">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <div className="card space-y-4">
+            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
               <MapPin className="w-4 h-4 text-primary-600" />
               Ort & Organisation
             </h4>
@@ -601,7 +600,7 @@ export default function EventEditPage() {
             </div>
           </div>
 
-          <div className="card border border-gray-200 dark:border-gray-700">
+          <div className="card space-y-4">
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <Settings2 className="w-4 h-4 text-primary-600" />
@@ -661,8 +660,7 @@ export default function EventEditPage() {
               {updateEventMutation.isPending ? 'Speichern...' : 'Speichern'}
             </button>
           </div>
-        </form>
-      </div>
+      </form>
 
       {inviteSelectionModalOpen && membersForEdit?.length ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
