@@ -43,6 +43,7 @@ export default function EventCreatePage() {
     repeat_days: [] as number[],
   });
   const [inviteSelectionModalOpen, setInviteSelectionModalOpen] = useState(false);
+  const [rsvpDeadlineOffsetHours, setRsvpDeadlineOffsetHours] = useState('');
 
   const categoryOptions: Array<{ value: 'training' | 'match' | 'other'; label: string }> = [
     { value: 'training', label: 'Training' },
@@ -99,10 +100,15 @@ export default function EventCreatePage() {
 
     const normalizedHours = Math.max(0, Math.min(168, Math.round(hoursBefore)));
     const deadlineDate = new Date(startDate.getTime() - normalizedHours * 60 * 60 * 1000);
+    setRsvpDeadlineOffsetHours(String(normalizedHours));
     setEventData((prev) => ({ ...prev, rsvp_deadline: formatLocalDateTime(deadlineDate) }));
   };
 
   const getCurrentRsvpDeadlineOffsetHours = (): string => {
+    if (rsvpDeadlineOffsetHours !== '') {
+      return rsvpDeadlineOffsetHours;
+    }
+
     if (!eventData.start_time || !eventData.rsvp_deadline) {
       return '';
     }
@@ -291,6 +297,12 @@ export default function EventCreatePage() {
       return;
     }
 
+    const alreadySetOffset = parseInt(rsvpDeadlineOffsetHours, 10);
+    if (Number.isFinite(alreadySetOffset)) {
+      applyRsvpDeadlineOffsetHours(alreadySetOffset);
+      return;
+    }
+
     const deadlineHours = getCategoryDefaultRsvpHours(teamSettings, eventData.type);
 
     if (deadlineHours === null || !Number.isFinite(deadlineHours) || deadlineHours < 0) {
@@ -306,6 +318,7 @@ export default function EventCreatePage() {
   }, [
     eventData.start_time,
     eventData.rsvp_deadline,
+    rsvpDeadlineOffsetHours,
     eventData.type,
     teamSettings?.default_rsvp_deadline_hours,
     teamSettings?.default_rsvp_deadline_hours_training,
@@ -794,7 +807,10 @@ export default function EventCreatePage() {
                       onClick={() => {
                         const defaultHours = getCategoryDefaultRsvpHours(teamSettings, eventData.type);
                         if (defaultHours !== null) {
-                          applyRsvpDeadlineOffsetHours(defaultHours);
+                          setRsvpDeadlineOffsetHours(String(defaultHours));
+                          if (eventData.start_time) {
+                            applyRsvpDeadlineOffsetHours(defaultHours);
+                          }
                         }
                       }}
                       className="text-xs text-primary-600 hover:text-primary-500"
@@ -809,21 +825,24 @@ export default function EventCreatePage() {
                     step={1}
                     value={getCurrentRsvpDeadlineOffsetHours()}
                     onChange={(e) => {
+                      setRsvpDeadlineOffsetHours(e.target.value);
                       const value = parseInt(e.target.value, 10);
                       if (!Number.isFinite(value)) {
                         setEventData((prev) => ({ ...prev, rsvp_deadline: '' }));
+                        return;
+                      }
+                      if (!eventData.start_time) {
                         return;
                       }
                       applyRsvpDeadlineOffsetHours(value);
                     }}
                     title="Stunden vor Termin"
                     aria-label="Rückmeldefrist in Stunden vor Termin"
-                    disabled={!eventData.start_time}
                     className="input mt-1"
                     placeholder="z.B. 24"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Frist endet am: {eventData.rsvp_deadline ? eventData.rsvp_deadline.replace('T', ' ') : '—'}
+                    Frist endet am: {eventData.rsvp_deadline ? eventData.rsvp_deadline.replace('T', ' ') : (eventData.start_time ? '—' : 'wird nach Wahl von Beginn berechnet')}
                   </p>
                 </div>
               </div>
