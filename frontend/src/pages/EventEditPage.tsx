@@ -807,13 +807,13 @@ export default function EventEditPage() {
               </div>
           </div>
 
-          <div className="mt-2 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-3">
-            <Link to={`/events/${eventId}`} className="btn btn-secondary w-full sm:w-auto">
-              Abbrechen
-            </Link>
-            <button type="submit" className="btn btn-primary w-full sm:w-auto" disabled={updateEventMutation.isPending}>
+          <div className="mt-2 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+            <button type="submit" className="btn btn-primary w-full" disabled={updateEventMutation.isPending}>
               {updateEventMutation.isPending ? 'Speichern...' : 'Speichern'}
             </button>
+            <Link to={`/events/${eventId}`} className="btn btn-secondary w-full inline-flex items-center justify-start text-left">
+              Abbrechen
+            </Link>
           </div>
       </form>
 
