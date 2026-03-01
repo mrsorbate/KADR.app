@@ -549,6 +549,8 @@ router.put('/:id', (req: AuthRequest, res) => {
       rsvp_deadline,
       duration_minutes,
       visibility_all,
+      invite_all,
+      invited_user_ids,
     } = req.body as {
       title?: string;
       type?: 'training' | 'match' | 'other';
@@ -565,6 +567,8 @@ router.put('/:id', (req: AuthRequest, res) => {
       rsvp_deadline?: string;
       duration_minutes?: number | null;
       visibility_all?: boolean | number;
+      invite_all?: boolean | number;
+      invited_user_ids?: number[];
     };
 
     if (!title || !type || !start_time || !end_time) {
@@ -603,6 +607,7 @@ router.put('/:id', (req: AuthRequest, res) => {
            rsvp_deadline = ?,
            duration_minutes = ?,
            visibility_all = ?,
+             invite_all = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     ).run(
@@ -621,8 +626,47 @@ router.put('/:id', (req: AuthRequest, res) => {
       rsvp_deadline || null,
       duration_minutes === null || duration_minutes === undefined || Number.isNaN(duration_minutes) ? null : duration_minutes,
       visibility_all === false || visibility_all === 0 ? 0 : 1,
+      invite_all === false || invite_all === 0 ? 0 : 1,
       eventId
     );
+
+    const teamMembers = db.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(event.team_id) as Array<{ user_id: number }>;
+    const teamMemberIds = teamMembers.map((member) => Number(member.user_id));
+    const normalizedInvitedUserIds = Array.isArray(invited_user_ids)
+      ? [...new Set(invited_user_ids.map((value) => Number(value)).filter((value) => Number.isFinite(value) && teamMemberIds.includes(value)))]
+      : [];
+
+    const resolvedInviteAll = !(invite_all === false || invite_all === 0);
+    const resolvedInvitedUserIds = resolvedInviteAll ? teamMemberIds : normalizedInvitedUserIds;
+
+    if (!resolvedInviteAll && resolvedInvitedUserIds.length === 0) {
+      return res.status(400).json({ error: 'Bitte mindestens einen Teilnehmer einladen' });
+    }
+
+    const existingResponses = db.prepare('SELECT user_id FROM event_responses WHERE event_id = ?').all(eventId) as Array<{ user_id: number }>;
+    const existingUserIdSet = new Set(existingResponses.map((row) => Number(row.user_id)));
+    const invitedUserIdSet = new Set(resolvedInvitedUserIds);
+
+    const usersToAdd = resolvedInvitedUserIds.filter((userId) => !existingUserIdSet.has(userId));
+    const usersToRemove = [...existingUserIdSet].filter((userId) => !invitedUserIdSet.has(userId));
+
+    if (usersToRemove.length > 0) {
+      const placeholders = usersToRemove.map(() => '?').join(',');
+      db.prepare(`DELETE FROM event_responses WHERE event_id = ? AND user_id IN (${placeholders})`).run(eventId, ...usersToRemove);
+    }
+
+    if (usersToAdd.length > 0) {
+      const teamSettings = db.prepare('SELECT default_response FROM teams WHERE id = ?').get(event.team_id) as { default_response?: string } | undefined;
+      const validStatuses = new Set(['pending', 'accepted', 'tentative', 'declined']);
+      const defaultResponseStatus = validStatuses.has(String(teamSettings?.default_response || 'pending'))
+        ? String(teamSettings?.default_response || 'pending')
+        : 'pending';
+
+      const insertStmt = db.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
+      for (const userId of usersToAdd) {
+        insertStmt.run(eventId, userId, defaultResponseStatus);
+      }
+    }
 
     return res.json({ success: true });
   } catch (error) {

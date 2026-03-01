@@ -29,7 +29,10 @@ export default function EventEditPage() {
     end_time: '',
     rsvp_deadline: '',
     visibility_all: true,
+    invite_all: true,
+    invited_user_ids: [] as number[],
   });
+  const [inviteSelectionModalOpen, setInviteSelectionModalOpen] = useState(false);
 
   const stepDurationMinutes = (delta: number) => {
     setEventData((prev) => {
@@ -135,6 +138,17 @@ export default function EventEditPage() {
     enabled: Boolean(event?.team_id),
   });
 
+  const { data: membersForEdit } = useQuery({
+    queryKey: ['team-members', event?.team_id],
+    queryFn: async () => {
+      const response = await teamsAPI.getMembers(event!.team_id);
+      return response.data;
+    },
+    enabled: Boolean(event?.team_id),
+  });
+
+  const allMemberIds = membersForEdit?.map((member: any) => member.id) || [];
+
   const homeVenues = Array.isArray(teamSettings?.home_venues)
     ? teamSettings.home_venues.filter((venue: any) => venue && typeof venue === 'object' && String(venue.name || '').trim())
     : [];
@@ -194,8 +208,23 @@ export default function EventEditPage() {
       end_time: toLocalInputValue(event.end_time),
       rsvp_deadline: toLocalInputValue(event.rsvp_deadline),
       visibility_all: event.visibility_all === 1 || event.visibility_all === true,
+      invite_all: event.invite_all === 1 || event.invite_all === true,
+      invited_user_ids: Array.isArray(event.responses)
+        ? [...new Set(event.responses.map((response: any) => response.user_id).filter((value: any) => Number.isFinite(value)))]
+        : [],
     });
   }, [event]);
+
+  useEffect(() => {
+    if (!eventData.invite_all || !allMemberIds.length) {
+      return;
+    }
+
+    const hasAllMembersSelected = eventData.invited_user_ids.length === allMemberIds.length;
+    if (!hasAllMembersSelected) {
+      setEventData((prev) => ({ ...prev, invited_user_ids: allMemberIds }));
+    }
+  }, [eventData.invite_all, eventData.invited_user_ids.length, allMemberIds.length]);
 
   useEffect(() => {
     if (!eventData.start_time || !eventData.duration_minutes) {
@@ -273,9 +302,29 @@ export default function EventEditPage() {
       rsvp_deadline: eventData.rsvp_deadline ? new Date(eventData.rsvp_deadline).toISOString() : undefined,
       duration_minutes: eventData.duration_minutes === '' ? undefined : parseInt(eventData.duration_minutes, 10),
       visibility_all: eventData.visibility_all,
+      invite_all: eventData.invite_all,
+      invited_user_ids: eventData.invited_user_ids,
     };
 
     updateEventMutation.mutate(dataToSend);
+  };
+
+  const openInviteSelectionModal = () => {
+    if (!membersForEdit?.length) {
+      return;
+    }
+
+    if (eventData.invited_user_ids.length === 0) {
+      setEventData((prev) => ({ ...prev, invited_user_ids: allMemberIds, invite_all: true }));
+    }
+
+    setInviteSelectionModalOpen(true);
+  };
+
+  const closeInviteSelectionModal = () => {
+    const inviteAll = allMemberIds.length > 0 && eventData.invited_user_ids.length === allMemberIds.length;
+    setEventData((prev) => ({ ...prev, invite_all: inviteAll }));
+    setInviteSelectionModalOpen(false);
   };
 
   if (!isTrainer) {
@@ -540,15 +589,49 @@ export default function EventEditPage() {
               />
             </div>
 
-            <div className="md:col-span-2 flex items-center gap-2">
-              <input
-                id="visibility_all"
-                type="checkbox"
-                checked={eventData.visibility_all}
-                onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
-              />
-              <label htmlFor="visibility_all" className="text-sm text-gray-700 dark:text-gray-300">
-                Teilnehmerliste fuer alle sichtbar
+            <div className="md:col-span-2 space-y-3">
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={eventData.invite_all}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    if (checked) {
+                      setEventData({ ...eventData, invite_all: true, invited_user_ids: allMemberIds });
+                    } else {
+                      setEventData((prev) => ({ ...prev, invite_all: false }));
+                      openInviteSelectionModal();
+                    }
+                  }}
+                  className="h-4 w-4 text-primary-600"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Alle Teammitglieder einladen</span>
+              </label>
+
+              {membersForEdit?.length ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={openInviteSelectionModal}
+                    className="btn btn-secondary"
+                  >
+                    {!eventData.invite_all ? 'Teilnehmer-Auswahl öffnen' : 'Nicht alle einladen'}
+                  </button>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {eventData.invited_user_ids.length} von {allMemberIds.length} eingeladen
+                  </span>
+                </div>
+              ) : null}
+
+              <label className="flex items-center space-x-3">
+                <input
+                  id="visibility_all"
+                  type="checkbox"
+                  checked={eventData.visibility_all}
+                  onChange={(e) => setEventData({ ...eventData, visibility_all: e.target.checked })}
+                  className="h-4 w-4 text-primary-600"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Teilnehmerliste für alle sichtbar</span>
               </label>
             </div>
           </div>
@@ -563,6 +646,68 @@ export default function EventEditPage() {
           </div>
         </form>
       </div>
+
+      {inviteSelectionModalOpen && membersForEdit?.length ? (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card max-w-lg w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Teilnehmer auswählen</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-3">
+              Wähle aus, welche Spieler eingeladen werden.
+            </p>
+
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={() => setEventData((prev) => ({ ...prev, invited_user_ids: allMemberIds, invite_all: true }))}
+                className="text-xs text-primary-600 hover:text-primary-500"
+              >
+                Alle auswählen
+              </button>
+            </div>
+
+            <div className="overflow-y-auto pr-1 space-y-2">
+              {membersForEdit.map((member: any) => {
+                const isChecked = eventData.invited_user_ids.includes(member.id);
+                return (
+                  <label key={member.id} className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        const nextIds = e.target.checked
+                          ? [...eventData.invited_user_ids, member.id]
+                          : eventData.invited_user_ids.filter((value) => value !== member.id);
+                        const inviteAll = nextIds.length === allMemberIds.length;
+                        setEventData((prev) => ({ ...prev, invited_user_ids: nextIds, invite_all: inviteAll }));
+                      }}
+                      className="h-4 w-4 text-primary-600"
+                    />
+                    <span>{member.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setInviteSelectionModalOpen(false)}
+                className="btn btn-secondary flex-1"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={closeInviteSelectionModal}
+                className="btn btn-primary flex-1"
+                disabled={eventData.invited_user_ids.length === 0}
+              >
+                Übernehmen
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -157,6 +157,8 @@ export const eventsAPI = {
     rsvp_deadline?: string;
     duration_minutes?: number;
     visibility_all?: boolean;
+    invite_all?: boolean;
+    invited_user_ids?: number[];
   }) => api.put(`/events/${id}`, data),
   
   updateResponse: (id: number, data: { status: string; comment?: string }) =>
