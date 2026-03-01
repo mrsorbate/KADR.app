@@ -598,6 +598,15 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
   );
   const insertResponseStmt = db.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
   const existingEventByExternalIdStmt = db.prepare('SELECT id FROM events WHERE external_game_id = ? LIMIT 1');
+  const existingLegacyMatchStmt = db.prepare(
+    `SELECT id
+     FROM events
+     WHERE team_id = ?
+       AND type = 'match'
+       AND external_game_id IS NULL
+       AND start_time = ?
+     LIMIT 1`
+  );
   const updateImportedEventStmt = db.prepare(
     `UPDATE events
      SET title = ?,
@@ -613,6 +622,7 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
        duration_minutes = ?,
        is_home_match = ?,
        opponent_crest_url = ?,
+       external_game_id = COALESCE(external_game_id, ?),
        updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`
   );
@@ -733,7 +743,21 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
         ? null
         : new Date(gameDate.getTime() - defaultRsvpHours * 60 * 60 * 1000).toISOString();
 
-    const locationObjects = [game?.location, game?.venue, game?.address, game?.adresse, game?.place, game?.sportfield]
+    const locationObjects = [
+      game?.location,
+      game?.venue,
+      game?.address,
+      game?.adresse,
+      game?.place,
+      game?.sportfield,
+      game?.match_location,
+      game?.matchLocation,
+      game?.locationDetails,
+      game?.location_details,
+      game?.sportstaette,
+      game?.spielstaette,
+      game?.spielstätte,
+    ]
       .filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === 'object');
 
     const pickFromLocationObjects = (...keys: string[]): string | null => {
@@ -757,7 +781,13 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       game?.stadium,
       game?.place,
       game?.sportfield,
-      pickFromLocationObjects('name', 'title', 'venue', 'venue_name', 'stadium', 'place', 'sportfield', 'sportstaette'),
+      game?.sportstaette,
+      game?.spielstaette,
+      game?.spielstätte,
+      game?.facility,
+      game?.field,
+      game?.ground,
+      pickFromLocationObjects('name', 'title', 'venue', 'venue_name', 'stadium', 'place', 'sportfield', 'sportstaette', 'spielstaette', 'spielstätte', 'facility', 'field', 'ground'),
     );
 
     const streetBase = pickFirstString(
@@ -766,12 +796,15 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       game?.address,
       game?.adresse,
       game?.location_street,
-      pickFromLocationObjects('street', 'strasse', 'address', 'adresse', 'address1', 'line1'),
+      game?.street_name,
+      game?.streetName,
+      pickFromLocationObjects('street', 'strasse', 'address', 'adresse', 'address1', 'line1', 'street_name', 'streetName'),
     );
     const houseNumber = pickFirstString(
       game?.house_number,
       game?.houseNumber,
-      pickFromLocationObjects('house_number', 'houseNumber', 'number', 'nr'),
+      game?.hausnummer,
+      pickFromLocationObjects('house_number', 'houseNumber', 'number', 'nr', 'hausnummer'),
     );
     const street = streetBase
       ? (houseNumber && !streetBase.includes(houseNumber) ? `${streetBase} ${houseNumber}` : streetBase)
@@ -782,13 +815,15 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
       game?.postal_code,
       game?.postalCode,
       game?.plz,
-      pickFromLocationObjects('zip', 'postal_code', 'postalCode', 'plz'),
+      game?.postcode,
+      pickFromLocationObjects('zip', 'postal_code', 'postalCode', 'plz', 'postcode'),
     );
     const city = pickFirstString(
       game?.city,
       game?.ort,
       game?.town,
-      pickFromLocationObjects('city', 'ort', 'town'),
+      game?.municipality,
+      pickFromLocationObjects('city', 'ort', 'town', 'municipality'),
     );
     const zipCity = pickFirstString(
       game?.zip_city,
@@ -801,7 +836,11 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
     const description = pickFirstString(game?.competition, game?.competition_short, game?.league, game?.staffel) || null;
 
     const exists = existingEventByExternalIdStmt.get(externalGameId) as { id: number } | undefined;
-    if (exists) {
+    const legacyMatch = !exists
+      ? (existingLegacyMatchStmt.get(teamId, gameDate.toISOString()) as { id: number } | undefined)
+      : undefined;
+    const eventToUpdate = exists || legacyMatch;
+    if (eventToUpdate) {
       updateImportedEventStmt.run(
         title,
         description,
@@ -816,11 +855,12 @@ export const runTeamGameImport = async (teamId: number, createdByUserId: number)
         120,
         isHomeMatch,
         opponentCrestUrl,
-        exists.id,
+        externalGameId,
+        eventToUpdate.id,
       );
 
       updated.push({
-        id: Number(exists.id),
+        id: Number(eventToUpdate.id),
         title,
         start_time: gameDate.toISOString(),
       });
