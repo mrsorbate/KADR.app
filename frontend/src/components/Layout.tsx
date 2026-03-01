@@ -169,27 +169,27 @@ export default function Layout({ organization }: LayoutProps) {
                   </Link>
                 )}
               </div>
-              <div className="md:hidden flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300 min-w-0">
+              <div className="md:hidden flex items-center space-x-1.5 text-sm text-gray-700 dark:text-gray-300 min-w-0">
                 {menuProfilePicture ? (
                   <Link to="/settings" aria-label="Zu den Einstellungen">
                     <img
                       src={resolveAssetUrl(menuProfilePicture)}
                       alt="Profilbild"
-                      className="w-7 h-7 rounded-full object-cover border border-gray-300 dark:border-gray-600 hover:opacity-90"
+                      className="w-6 h-6 min-[390px]:w-7 min-[390px]:h-7 rounded-full object-cover border border-gray-300 dark:border-gray-600 hover:opacity-90"
                     />
                   </Link>
                 ) : (
                   <Link to="/settings" aria-label="Zu den Einstellungen">
-                    <div className="w-7 h-7 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center hover:opacity-90">
+                    <div className="w-6 h-6 min-[390px]:w-7 min-[390px]:h-7 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center hover:opacity-90">
                       <UserIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     </div>
                   </Link>
                 )}
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <Link to="/settings" className="font-medium truncate max-w-[90px] hover:underline">
+                <div className="flex items-center gap-1 min-w-0">
+                  <Link to="/settings" className="font-medium truncate max-w-[64px] min-[390px]:max-w-[90px] hover:underline">
                     {firstName}
                   </Link>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${roleBadgeClass}`}>
+                  <span className={`hidden min-[390px]:inline text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap ${roleBadgeClass}`}>
                     {roleLabel}
                   </span>
                 </div>
