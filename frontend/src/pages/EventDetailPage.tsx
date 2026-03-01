@@ -307,6 +307,9 @@ export default function EventDetailPage() {
     locationParts.push(fallbackLocation);
   }
   const locationLabel = locationParts.join(', ');
+  const encodedLocationQuery = locationLabel ? encodeURIComponent(locationLabel) : '';
+  const googleMapsUrl = encodedLocationQuery ? `https://www.google.com/maps/search/?api=1&query=${encodedLocationQuery}` : '';
+  const appleMapsUrl = encodedLocationQuery ? `https://maps.apple.com/?q=${encodedLocationQuery}` : '';
   const shouldShowAddressBlock = event?.type === 'match' || locationParts.length > 0;
   const isMatchWithoutAddress = event?.type === 'match' && locationParts.length === 0;
   const hasMeetingInfo = (event?.meeting_point && String(event.meeting_point).trim().length > 0)
@@ -430,7 +433,34 @@ export default function EventDetailPage() {
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
                   <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Ort</p>
                   {locationLabel ? (
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-white break-words">{locationLabel}</p>
+                    <div className="mt-1 space-y-1">
+                      <a
+                        href={googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-gray-900 dark:text-white break-words underline decoration-dotted underline-offset-2 hover:text-primary-600 dark:hover:text-primary-400"
+                      >
+                        {locationLabel}
+                      </a>
+                      <div className="flex flex-wrap gap-3 text-xs">
+                        <a
+                          href={googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary-600 hover:text-primary-500"
+                        >
+                          In Google Maps öffnen
+                        </a>
+                        <a
+                          href={appleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary-600 hover:text-primary-500"
+                        >
+                          In Apple Karten öffnen
+                        </a>
+                      </div>
+                    </div>
                   ) : (
                     <div className="mt-1 space-y-2">
                       <p className="text-sm text-gray-600 dark:text-gray-300">Keine Adresse hinterlegt</p>
