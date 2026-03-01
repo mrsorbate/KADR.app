@@ -726,7 +726,7 @@ export default function EventDetailPage() {
             className="w-full btn btn-secondary flex items-center justify-center space-x-2"
           >
             <Pencil className="w-5 h-5" />
-            <span>{isMatchWithoutAddress ? 'Adresse ergänzen' : 'Termin bearbeiten'}</span>
+            <span>{event?.type === 'match' ? 'Adresse ergänzen' : 'Termin bearbeiten'}</span>
           </Link>
           <button
             onClick={() => setDeleteModalOpen(true)}
