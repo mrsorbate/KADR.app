@@ -88,6 +88,19 @@ function generateRecurringDates(
   return dates;
 }
 
+function parseRepeatUntilDate(value: string): Date {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return date;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value).trim())) {
+    date.setHours(23, 59, 59, 999);
+  }
+
+  return date;
+}
+
 // Get upcoming events for user (next 6 events)
 router.get('/my-upcoming', (req: AuthRequest, res) => {
   try {
@@ -253,7 +266,31 @@ router.get('/:id', (req: AuthRequest, res) => {
       responses = responses.filter((response: any) => response.user_id === req.user!.id);
     }
 
-    res.json({ ...event, responses });
+    const eventWithSeriesMeta = { ...event } as any;
+    if (event.series_id) {
+      const seriesEvents = db.prepare(
+        'SELECT start_time FROM events WHERE series_id = ? ORDER BY start_time ASC'
+      ).all(event.series_id) as Array<{ start_time: string }>;
+
+      const repeatDaysSet = new Set<number>();
+      for (const seriesEvent of seriesEvents) {
+        const date = new Date(seriesEvent.start_time);
+        if (!Number.isNaN(date.getTime())) {
+          repeatDaysSet.add(date.getDay());
+        }
+      }
+
+      const lastSeriesEvent = seriesEvents[seriesEvents.length - 1];
+      const repeatUntil = lastSeriesEvent?.start_time
+        ? String(lastSeriesEvent.start_time).slice(0, 10)
+        : null;
+
+      eventWithSeriesMeta.repeat_type = 'custom';
+      eventWithSeriesMeta.repeat_days = [...repeatDaysSet].sort((a, b) => a - b);
+      eventWithSeriesMeta.repeat_until = repeatUntil;
+    }
+
+    res.json({ ...eventWithSeriesMeta, responses });
   } catch (error) {
     console.error('Get event error:', error);
     res.status(500).json({ error: 'Failed to fetch event' });
@@ -429,7 +466,7 @@ router.post('/', (req: AuthRequest, res) => {
       // Generate all event dates
       const startDate = new Date(start_time);
       const endDate = new Date(resolvedEndTime);
-      const untilDate = new Date(repeatUntilValue);
+      const untilDate = parseRepeatUntilDate(repeatUntilValue);
       
       const eventDates = generateRecurringDates(startDate, endDate, repeat_type!, untilDate, effectiveRepeatDays);
       
@@ -570,6 +607,8 @@ router.put('/:id', (req: AuthRequest, res) => {
       visibility_all,
       invite_all,
       invited_user_ids,
+      repeat_until,
+      repeat_days,
     } = req.body as {
       title?: string;
       type?: 'training' | 'match' | 'other';
@@ -588,13 +627,15 @@ router.put('/:id', (req: AuthRequest, res) => {
       visibility_all?: boolean | number;
       invite_all?: boolean | number;
       invited_user_ids?: number[];
+      repeat_until?: string;
+      repeat_days?: number[];
     };
 
     if (!title || !type || !start_time || !end_time) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const event = db.prepare('SELECT id, team_id, series_id, start_time, end_time FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, series_id, start_time, end_time, created_by FROM events WHERE id = ?').get(eventId) as any;
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
@@ -645,9 +686,15 @@ router.put('/:id', (req: AuthRequest, res) => {
       ? targetStartDate.getTime() - targetRsvpDate.getTime()
       : null;
 
-    const eventsToUpdate = updateSeries && event.series_id
-      ? db.prepare('SELECT id, start_time FROM events WHERE series_id = ?').all(event.series_id) as Array<{ id: number; start_time: string }>
-      : [{ id: eventId, start_time: event.start_time }];
+    const normalizedRepeatDays = Array.isArray(repeat_days)
+      ? [...new Set(repeat_days.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value <= 6))]
+      : [];
+    const repeatUntilValue = typeof repeat_until === 'string' ? repeat_until.trim() : '';
+    const shouldReshapeSeries = Boolean(updateSeries && event.series_id && (repeatUntilValue || normalizedRepeatDays.length > 0));
+
+    if (shouldReshapeSeries && (!repeatUntilValue || normalizedRepeatDays.length === 0)) {
+      return res.status(400).json({ error: 'Für Serien-Änderungen sind Wochentage und Enddatum erforderlich' });
+    }
 
     const updateStmt = db.prepare(
       `UPDATE events
@@ -667,6 +714,7 @@ router.put('/:id', (req: AuthRequest, res) => {
            duration_minutes = ?,
            visibility_all = ?,
            invite_all = ?,
+             series_id = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     );
@@ -698,6 +746,130 @@ router.put('/:id', (req: AuthRequest, res) => {
       }
     };
 
+    const createSeriesEventStmt = db.prepare(
+      'INSERT INTO events (team_id, title, type, description, location, location_venue, location_street, location_zip_city, pitch_type, meeting_point, arrival_minutes, start_time, end_time, rsvp_deadline, duration_minutes, visibility_all, invite_all, created_by, series_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    );
+
+    if (shouldReshapeSeries) {
+      const untilDate = parseRepeatUntilDate(repeatUntilValue);
+      if (Number.isNaN(untilDate.getTime())) {
+        return res.status(400).json({ error: 'Ungültiges Enddatum für die Serie' });
+      }
+
+      const seriesEvents = db.prepare('SELECT id, start_time FROM events WHERE series_id = ? ORDER BY start_time ASC').all(event.series_id) as Array<{ id: number; start_time: string }>;
+      if (seriesEvents.length === 0) {
+        return res.status(400).json({ error: 'Keine Serientermine gefunden' });
+      }
+
+      const firstSeriesStart = new Date(seriesEvents[0].start_time);
+      if (Number.isNaN(firstSeriesStart.getTime())) {
+        return res.status(400).json({ error: 'Ungültiger Serienstart' });
+      }
+
+      const generationStart = new Date(firstSeriesStart);
+      generationStart.setUTCHours(
+        targetStartDate.getUTCHours(),
+        targetStartDate.getUTCMinutes(),
+        targetStartDate.getUTCSeconds(),
+        targetStartDate.getUTCMilliseconds()
+      );
+      const generationEnd = new Date(generationStart.getTime() + targetDurationMs);
+
+      const generatedDates = generateRecurringDates(
+        generationStart,
+        generationEnd,
+        'custom',
+        untilDate,
+        normalizedRepeatDays
+      );
+
+      if (generatedDates.length === 0) {
+        return res.status(400).json({ error: 'Keine gültigen Termine für die Serie erzeugt' });
+      }
+
+      const remainingExisting = [...seriesEvents];
+
+      for (const generatedDate of generatedDates) {
+        const desiredStartMs = generatedDate.start.getTime();
+        const existingIndex = remainingExisting.findIndex((item) => {
+          const value = new Date(item.start_time).getTime();
+          return Number.isFinite(value) && value === desiredStartMs;
+        });
+
+        const nextRsvpDeadline = targetRsvpOffsetMs === null
+          ? null
+          : new Date(generatedDate.start.getTime() - targetRsvpOffsetMs).toISOString();
+
+        if (existingIndex >= 0) {
+          const existingEvent = remainingExisting[existingIndex];
+          remainingExisting.splice(existingIndex, 1);
+
+          updateStmt.run(
+            title,
+            type,
+            description || null,
+            resolvedLocation,
+            location_venue || null,
+            location_street || null,
+            location_zip_city || null,
+            pitch_type || null,
+            meeting_point || null,
+            arrival_minutes === null || arrival_minutes === undefined || Number.isNaN(arrival_minutes) ? null : arrival_minutes,
+            generatedDate.start.toISOString(),
+            generatedDate.end.toISOString(),
+            nextRsvpDeadline,
+            duration_minutes === null || duration_minutes === undefined || Number.isNaN(duration_minutes) ? null : duration_minutes,
+            visibility_all === false || visibility_all === 0 ? 0 : 1,
+            resolvedInviteAll ? 1 : 0,
+            event.series_id,
+            existingEvent.id
+          );
+
+          syncInvitesForEvent(existingEvent.id);
+          continue;
+        }
+
+        const inserted = createSeriesEventStmt.run(
+          event.team_id,
+          title,
+          type,
+          description || null,
+          resolvedLocation,
+          location_venue || null,
+          location_street || null,
+          location_zip_city || null,
+          pitch_type || null,
+          meeting_point || null,
+          arrival_minutes === null || arrival_minutes === undefined || Number.isNaN(arrival_minutes) ? null : arrival_minutes,
+          generatedDate.start.toISOString(),
+          generatedDate.end.toISOString(),
+          nextRsvpDeadline,
+          duration_minutes === null || duration_minutes === undefined || Number.isNaN(duration_minutes) ? null : duration_minutes,
+          visibility_all === false || visibility_all === 0 ? 0 : 1,
+          resolvedInviteAll ? 1 : 0,
+          event.created_by,
+          event.series_id
+        );
+
+        syncInvitesForEvent(Number(inserted.lastInsertRowid));
+      }
+
+      if (remainingExisting.length > 0) {
+        const idsToDelete = remainingExisting.map((item) => Number(item.id)).filter((value) => Number.isFinite(value));
+        if (idsToDelete.length > 0) {
+          const placeholders = idsToDelete.map(() => '?').join(',');
+          db.prepare(`DELETE FROM event_responses WHERE event_id IN (${placeholders})`).run(...idsToDelete);
+          db.prepare(`DELETE FROM events WHERE id IN (${placeholders})`).run(...idsToDelete);
+        }
+      }
+
+      return res.json({ success: true });
+    }
+
+    const eventsToUpdate = updateSeries && event.series_id
+      ? db.prepare('SELECT id, start_time FROM events WHERE series_id = ?').all(event.series_id) as Array<{ id: number; start_time: string }>
+      : [{ id: eventId, start_time: event.start_time }];
+
     for (const targetEvent of eventsToUpdate) {
       const currentStart = new Date(targetEvent.start_time);
       const nextStartDate = Number.isNaN(currentStart.getTime())
@@ -725,6 +897,7 @@ router.put('/:id', (req: AuthRequest, res) => {
         duration_minutes === null || duration_minutes === undefined || Number.isNaN(duration_minutes) ? null : duration_minutes,
         visibility_all === false || visibility_all === 0 ? 0 : 1,
         resolvedInviteAll ? 1 : 0,
+        updateSeries && event.series_id ? event.series_id : null,
         targetEvent.id
       );
 
