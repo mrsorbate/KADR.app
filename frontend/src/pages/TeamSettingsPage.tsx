@@ -465,6 +465,22 @@ export default function TeamSettingsPage() {
   };
 
   const teamPictureUrl = resolveAssetUrl(team?.team_picture);
+  const calendarFeedUrl = String((settings as any)?.calendar_feed_url || '');
+  const calendarWebcalUrl = String((settings as any)?.calendar_webcal_url || '');
+
+  const copyCalendarFeedUrl = async () => {
+    if (!calendarFeedUrl) {
+      showToast('Kein Kalender-Link verfügbar', 'warning');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(calendarFeedUrl);
+      showToast('Kalender-Link kopiert', 'success');
+    } catch {
+      showToast('Kalender-Link konnte nicht kopiert werden', 'error');
+    }
+  };
 
   if (user?.role !== 'trainer') {
     return <Navigate to="/" replace />;
@@ -1040,6 +1056,45 @@ export default function TeamSettingsPage() {
             >
               {updateHomeVenuesMutation.isPending ? 'Speichert...' : 'Heimspiel-Plätze speichern'}
             </button>
+          </div>
+
+          <div className="card space-y-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+              Kalender-Export
+            </h2>
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Diesen Link in Apple/Google/Outlook als Abo-Kalender hinzufügen. Neue oder geänderte Termine werden automatisch beim nächsten Kalender-Refresh übernommen.
+            </p>
+
+            <div className="space-y-2">
+              <label className="block text-xs text-gray-500 dark:text-gray-400">ICS-Feed URL</label>
+              <input
+                type="text"
+                readOnly
+                value={calendarFeedUrl}
+                className="input"
+                placeholder="Kalender-Link wird geladen..."
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={copyCalendarFeedUrl}
+                className="btn btn-secondary w-full sm:w-auto"
+                disabled={!calendarFeedUrl}
+              >
+                Link kopieren
+              </button>
+              {calendarWebcalUrl && (
+                <a
+                  href={calendarWebcalUrl}
+                  className="btn btn-primary w-full sm:w-auto text-center"
+                >
+                  In Kalender abonnieren
+                </a>
+              )}
+            </div>
           </div>
         </>
       )}

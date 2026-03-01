@@ -49,6 +49,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     description TEXT,
+    calendar_token TEXT UNIQUE,
     fussballde_id TEXT,
     default_response TEXT DEFAULT 'pending',
     default_rsvp_deadline_hours INTEGER,
@@ -161,6 +162,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
   CREATE INDEX IF NOT EXISTS idx_events_team ON events(team_id);
   CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_calendar_token ON teams(calendar_token);
   CREATE INDEX IF NOT EXISTS idx_event_responses_event ON event_responses(event_id);
   CREATE INDEX IF NOT EXISTS idx_event_responses_user ON event_responses(user_id);
   CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
@@ -325,6 +327,14 @@ try {
     db.exec('ALTER TABLE teams ADD COLUMN team_picture TEXT');
     console.log('✅ Added team_picture column to teams table');
   }
+
+  const hasCalendarToken = teamColumns.some((col) => col.name === 'calendar_token');
+  if (!hasCalendarToken) {
+    db.exec('ALTER TABLE teams ADD COLUMN calendar_token TEXT');
+    console.log('✅ Added calendar_token column to teams table');
+  }
+  db.exec("UPDATE teams SET calendar_token = lower(hex(randomblob(24))) WHERE calendar_token IS NULL OR TRIM(calendar_token) = ''");
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_calendar_token ON teams(calendar_token)');
 
   const hasFussballDeId = teamColumns.some((col) => col.name === 'fussballde_id');
   if (!hasFussballDeId) {

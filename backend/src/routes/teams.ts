@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { randomBytes } from 'crypto';
 import db from '../database/init';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { CreateTeamDTO } from '../types';
@@ -85,6 +86,42 @@ const resolveDefaultHomeVenue = (venues: HomeVenue[], defaultName: unknown): Hom
   return venues.find((venue) => venue.name === normalizedDefaultName) || venues[0] || null;
 };
 
+const escapeICalText = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+
+const formatICalDate = (value: unknown): string | null => {
+  const date = new Date(String(value || ''));
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+};
+
+const getCalendarUrls = (req: AuthRequest | any, teamId: number, token: string | null | undefined) => {
+  const normalizedToken = String(token || '').trim();
+  if (!normalizedToken) {
+    return { calendar_feed_url: null, calendar_webcal_url: null };
+  }
+
+  const forwardedProto = String(req.headers?.['x-forwarded-proto'] || '').split(',')[0]?.trim();
+  const protocol = forwardedProto || req.protocol || 'http';
+  const host = String(req.get('host') || '').trim();
+  if (!host) {
+    return { calendar_feed_url: null, calendar_webcal_url: null };
+  }
+
+  const calendarFeedUrl = `${protocol}://${host}/api/teams/${teamId}/calendar.ics?token=${encodeURIComponent(normalizedToken)}`;
+  const calendarWebcalUrl = calendarFeedUrl.replace(/^https?:\/\//i, 'webcal://');
+  return {
+    calendar_feed_url: calendarFeedUrl,
+    calendar_webcal_url: calendarWebcalUrl,
+  };
+};
+
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) {
@@ -117,6 +154,77 @@ const upload = multer({
     } else {
       cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
     }
+  }
+});
+
+router.get('/:id/calendar.ics', (req, res) => {
+  try {
+    const teamId = parseInt(req.params.id, 10);
+    const token = String(req.query.token || '').trim();
+
+    if (!Number.isFinite(teamId) || teamId <= 0 || !token) {
+      return res.status(400).json({ error: 'Invalid calendar request' });
+    }
+
+    const team = db.prepare('SELECT id, name, calendar_token FROM teams WHERE id = ?').get(teamId) as any;
+    if (!team || String(team.calendar_token || '') !== token) {
+      return res.status(403).json({ error: 'Invalid calendar token' });
+    }
+
+    const events = db.prepare(
+      `SELECT id, title, description, start_time, end_time, location_venue, location_street, location_zip_city, location, updated_at
+       FROM events
+       WHERE team_id = ?
+       ORDER BY start_time ASC`
+    ).all(teamId) as Array<any>;
+
+    const nowStamp = formatICalDate(new Date().toISOString()) || '19700101T000000Z';
+    const lines: string[] = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//sqadX.app//Team Calendar//DE',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+      `X-WR-CALNAME:${escapeICalText(team.name || `Team ${teamId}`)}`,
+      'X-PUBLISHED-TTL:PT15M',
+    ];
+
+    for (const event of events) {
+      const dtStart = formatICalDate(event.start_time);
+      const dtEnd = formatICalDate(event.end_time);
+      if (!dtStart || !dtEnd) {
+        continue;
+      }
+
+      const dtStamp = formatICalDate(event.updated_at) || nowStamp;
+      const location = [event.location_venue, event.location_street, event.location_zip_city]
+        .filter((value) => String(value || '').trim().length > 0)
+        .join(', ') || String(event.location || '').trim();
+
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:sqadx-team${teamId}-event${event.id}@sqadx.app`);
+      lines.push(`DTSTAMP:${dtStamp}`);
+      lines.push(`DTSTART:${dtStart}`);
+      lines.push(`DTEND:${dtEnd}`);
+      lines.push(`SUMMARY:${escapeICalText(event.title || 'Termin')}`);
+      if (event.description) {
+        lines.push(`DESCRIPTION:${escapeICalText(event.description)}`);
+      }
+      if (location) {
+        lines.push(`LOCATION:${escapeICalText(location)}`);
+      }
+      lines.push('END:VEVENT');
+    }
+
+    lines.push('END:VCALENDAR');
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Content-Disposition', `inline; filename="team-${teamId}.ics"`);
+    return res.status(200).send(lines.join('\r\n'));
+  } catch (error) {
+    console.error('Calendar export error:', error);
+    return res.status(500).json({ error: 'Failed to generate calendar feed' });
   }
 });
 
@@ -185,9 +293,11 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
       `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
-              home_venues, default_home_venue_name
+              home_venues, default_home_venue_name, calendar_token
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
+
+    const calendarUrls = getCalendarUrls(req, teamId, settings?.calendar_token);
 
     if (!settings) {
       return res.status(404).json({ error: 'Team not found' });
@@ -197,6 +307,8 @@ router.get('/:id/settings', (req: AuthRequest, res) => {
       ...settings,
       home_venues: parseHomeVenuesFromDb(settings.home_venues),
       default_home_venue_name: settings.default_home_venue_name || null,
+      calendar_token: undefined,
+      ...calendarUrls,
     });
   } catch (error) {
     console.error('Get team settings error:', error);
@@ -453,14 +565,18 @@ router.put('/:id/settings', (req: AuthRequest, res) => {
       `SELECT id, fussballde_id, fussballde_team_name, default_response, default_rsvp_deadline_hours,
               default_rsvp_deadline_hours_training, default_rsvp_deadline_hours_match, default_rsvp_deadline_hours_other,
               default_arrival_minutes, default_arrival_minutes_training, default_arrival_minutes_match, default_arrival_minutes_other,
-              home_venues, default_home_venue_name
+              home_venues, default_home_venue_name, calendar_token
        FROM teams WHERE id = ?`
     ).get(teamId) as any;
+
+    const calendarUrls = getCalendarUrls(req, teamId, updatedSettings?.calendar_token);
 
     return res.json({
       ...updatedSettings,
       home_venues: parseHomeVenuesFromDb(updatedSettings.home_venues),
       default_home_venue_name: updatedSettings.default_home_venue_name || null,
+      calendar_token: undefined,
+      ...calendarUrls,
     });
   } catch (error) {
     console.error('Update team settings error:', error);
@@ -1374,10 +1490,11 @@ router.post('/', (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Only admins can create teams' });
     }
 
+    const calendarToken = randomBytes(24).toString('hex');
     const stmt = db.prepare(
-      'INSERT INTO teams (name, description, created_by) VALUES (?, ?, ?)'
+      'INSERT INTO teams (name, description, calendar_token, created_by) VALUES (?, ?, ?, ?)'
     );
-    const result = stmt.run(name, description, req.user!.id);
+    const result = stmt.run(name, description, calendarToken, req.user!.id);
 
     // Team is created without members - admin will assign trainers via admin panel
 
