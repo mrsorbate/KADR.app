@@ -383,7 +383,7 @@ export default function EventDetailPage() {
                 {showDeclineReason ? (
                   <div className="min-w-0 flex-1">
                     <p className="text-gray-900 dark:text-white font-medium truncate">{response.user_name}</p>
-                    <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 break-words">
+                    <p className="mt-0 text-xs text-gray-600 dark:text-gray-300 break-words">
                       Grund: {response.comment.trim()}
                     </p>
                   </div>
