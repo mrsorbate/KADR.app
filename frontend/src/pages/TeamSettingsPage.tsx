@@ -169,7 +169,7 @@ export default function TeamSettingsPage() {
     }) => teamsAPI.updateSettings(teamId, payload),
     onSuccess: () => {
       invalidateSettingsQueries();
-      showToast('Standard-Einstellungen gespeichert', 'success');
+      showToast('Termineinstellungen gespeichert', 'success');
     },
     onError: (mutationError: any) => {
       showToast(mutationError?.response?.data?.error || 'Fehler beim Speichern', 'error');
@@ -592,7 +592,7 @@ export default function TeamSettingsPage() {
           <div className="card space-y-4">
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <SlidersHorizontal className="w-5 h-5 text-primary-600" />
-              Standard-Einstellungen
+              Termineinstellungen
             </h2>
             <div>
               <label htmlFor="default-response" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -806,11 +806,26 @@ export default function TeamSettingsPage() {
               </div>
             </div>
 
+            <button
+              type="button"
+              onClick={saveDefaultSettings}
+              disabled={updateDefaultSettingsMutation.isPending}
+              className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
+            >
+              {updateDefaultSettingsMutation.isPending ? 'Speichert...' : 'Termineinstellungen speichern'}
+            </button>
+          </div>
+
+          <div className="card space-y-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+              Heimspiel-Plätze
+            </h2>
+
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Heimspiel-Plätze
-                </label>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  Plätze für Heimspiele verwalten
+                </p>
                 <button
                   type="button"
                   onClick={addHomeVenue}
@@ -870,7 +885,7 @@ export default function TeamSettingsPage() {
               disabled={updateDefaultSettingsMutation.isPending}
               className="btn btn-primary w-full sm:w-auto disabled:opacity-50"
             >
-              {updateDefaultSettingsMutation.isPending ? 'Speichert...' : 'Standards speichern'}
+              {updateDefaultSettingsMutation.isPending ? 'Speichert...' : 'Heimspiel-Plätze speichern'}
             </button>
           </div>
         </>
