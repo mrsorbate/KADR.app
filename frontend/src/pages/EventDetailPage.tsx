@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { eventsAPI } from '../lib/api';
@@ -61,14 +61,6 @@ export default function EventDetailPage() {
     setDeleteModalOpen(false);
   };
 
-  const handleResponse = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateResponseMutation.mutate({
-      status: selectedStatus,
-      comment: comment || undefined,
-    });
-  };
-
   if (isLoading) {
     return <div className="text-center py-12 text-gray-600 dark:text-gray-300">Lädt...</div>;
   }
@@ -82,6 +74,25 @@ export default function EventDetailPage() {
   const isTrainer = user?.role === 'trainer';
   const isVisibilityAll = event?.visibility_all === 1 || event?.visibility_all === true;
   const canViewResponses = isTrainer || isVisibilityAll;
+
+  useEffect(() => {
+    if (myResponse?.status === 'accepted' || myResponse?.status === 'declined' || myResponse?.status === 'tentative') {
+      setSelectedStatus(myResponse.status);
+    }
+
+    if (typeof myResponse?.comment === 'string') {
+      setComment(myResponse.comment);
+    } else {
+      setComment('');
+    }
+  }, [myResponse?.status, myResponse?.comment]);
+
+  const saveOwnResponse = (status: 'accepted' | 'declined' | 'tentative', nextComment: string) => {
+    updateResponseMutation.mutate({
+      status,
+      comment: nextComment.trim() ? nextComment : undefined,
+    });
+  };
   const handleTrainerStatusChangeFromModule = (userId: number, targetStatus: string) => {
     if (!isTrainer || updatePlayerResponseMutation.isPending) return;
     updatePlayerResponseMutation.mutate({
@@ -374,11 +385,14 @@ export default function EventDetailPage() {
               </div>
             ) : null}
 
-            <form onSubmit={handleResponse} className="space-y-4">
+            <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   type="button"
-                  onClick={() => setSelectedStatus('accepted')}
+                  onClick={() => {
+                    setSelectedStatus('accepted');
+                    saveOwnResponse('accepted', comment);
+                  }}
                   className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
                     selectedStatus === 'accepted'
                       ? 'bg-green-600 text-white'
@@ -389,7 +403,10 @@ export default function EventDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedStatus('tentative')}
+                  onClick={() => {
+                    setSelectedStatus('tentative');
+                    saveOwnResponse('tentative', comment);
+                  }}
                   className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
                     selectedStatus === 'tentative'
                       ? 'bg-yellow-600 text-white'
@@ -400,7 +417,10 @@ export default function EventDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedStatus('declined')}
+                  onClick={() => {
+                    setSelectedStatus('declined');
+                    saveOwnResponse('declined', comment);
+                  }}
                   className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
                     selectedStatus === 'declined'
                       ? 'bg-red-600 text-white'
@@ -418,20 +438,17 @@ export default function EventDetailPage() {
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
+                  onBlur={() => saveOwnResponse(selectedStatus, comment)}
                   className="input"
                   rows={2}
                   placeholder="z.B. Komme später..."
                 />
               </div>
 
-              <button
-                type="submit"
-                className="btn btn-primary w-full"
-                disabled={updateResponseMutation.isPending}
-              >
-                {updateResponseMutation.isPending ? 'Wird gespeichert...' : 'Rückmeldung speichern'}
-              </button>
-            </form>
+              {updateResponseMutation.isPending && (
+                <p className="text-sm text-gray-600 dark:text-gray-300">Speichert...</p>
+              )}
+            </div>
           </div>
 
         </div>
