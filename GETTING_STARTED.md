@@ -21,6 +21,10 @@ Die App wurde erfolgreich eingerichtet und läuft bereits:
 
 4. **Spieler einladen**: Weitere Benutzer müssen sich registrieren und können dann zu Teams hinzugefügt werden
 
+5. **Serientermine nutzen**:
+   - Beim Erstellen: „Serientermin“ auf Ja setzen, Wochentage wählen, Enddatum setzen
+   - Beim Bearbeiten: entscheiden zwischen „nur dieser Termin“ oder „ganze Serie“
+
 ## 🎯 Hauptfunktionen
 
 ### ✅ Implementiert
@@ -28,10 +32,23 @@ Die App wurde erfolgreich eingerichtet und läuft bereits:
 - ✓ Rollen-System (Trainer/Spieler)
 - ✓ Team-Verwaltung
 - ✓ Terminverwaltung (Training/Spiele/Sonstiges)
-- ✓ Zu-/Absagen System mit Kommentaren
+- ✓ Zu-/Absagen System inkl. Trainer-Steuerung pro Spieler
 - ✓ Kaderverwaltung (Spieler, Trainer, Staff)
 - ✓ Anwesenheitsstatistiken
 - ✓ Einladungs-System mit Links
+- ✓ Serientermine mit Wochentagen + Enddatum
+
+### 🔄 Aktueller Ablauf (März 2026)
+
+- **Serientermine**
+   - Seriendaten werden in der normalen Termin-Detailseite nicht angezeigt.
+   - Beim Einzel-Bearbeiten eines Serientermins wird dieser Termin aus der Serie gelöst.
+
+- **Absagen / Gründe**
+   - Spieler müssen bei eigener Absage einen Grund angeben.
+   - Trainer können in der Termin-Detailansicht den Status für sich und Spieler direkt per Klick setzen.
+   - Ein Absagegrund ist für Trainer dabei optional.
+   - Hinterlegte Absagegründe werden Trainern in der Teilnehmerliste bei „Abgesagt“ angezeigt.
 
 ### 📱 Features
 - Progressive Web App (PWA) - kann auf dem Handy installiert werden

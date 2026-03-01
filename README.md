@@ -5,11 +5,21 @@ Eine benutzerfreundliche Team-Management-App für Sportvereine mit Fokus auf Ter
 ## Features
 
 - ✅ **Terminverwaltung**: Trainings und Spiele einfach organisieren
-- ✅ **Zu-/Absagen System**: Schnelle Rückmeldungen von Spielern
+- ✅ **Zu-/Absagen System**: Schnelle Rückmeldungen inkl. Trainer-Steuerung pro Spieler
 - ✅ **Kaderverwaltung**: Spieler und Trainer verwalten
 - ✅ **Statistiken**: Anwesenheitsquoten
+- ✅ **Serientermine**: Wiederholungen mit Wochentagen und Enddatum
 - 📱 **Progressive Web App**: Auf allen Geräten nutzbar
 - 🔒 **Sicher**: Moderne Authentifizierung und Datenschutz
+
+### Aktueller Produktstand (März 2026)
+
+- Serientermine können beim Erstellen per **Ja/Nein** aktiviert werden, danach werden Wochentage und „bis wann“ gewählt.
+- Beim Bearbeiten von Serienterminen ist der Scope auswählbar: **nur dieser Termin** oder **ganze Serie**.
+- Wird ein Serientermin einzeln bearbeitet, wird er aus der Serie gelöst (eigenständiger Termin).
+- Die Serieninformation wird in der normalen Termin-Detailansicht nicht mehr angezeigt, sondern nur im Bearbeitungsfluss.
+- Trainer sehen in der Termin-Detailansicht den hinterlegten Absagegrund von Spielern.
+- Spieler müssen bei eigener Absage einen Grund angeben; Trainer können Status für sich und Spieler ohne Pflichtgrund setzen.
 
 ## Tech Stack
 
