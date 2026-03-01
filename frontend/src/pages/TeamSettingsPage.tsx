@@ -867,14 +867,14 @@ export default function TeamSettingsPage() {
             </h2>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Plätze für Heimspiele verwalten
+                  Plätze für Heimspiele verwalten und einen Standardplatz festlegen.
                 </p>
                 <button
                   type="button"
                   onClick={addHomeVenue}
-                  className="btn btn-secondary"
+                  className="btn btn-secondary w-full sm:w-auto"
                 >
                   Platz hinzufügen
                 </button>
@@ -902,53 +902,80 @@ export default function TeamSettingsPage() {
               </div>
 
               {homeVenues.length === 0 ? (
-                <p className="text-xs text-gray-500 dark:text-gray-400">Noch keine Plätze angelegt.</p>
+                <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 p-4 text-sm text-gray-500 dark:text-gray-400">
+                  Noch keine Plätze angelegt.
+                </div>
               ) : (
                 <div className="space-y-3">
                   {homeVenues.map((venue, index) => (
-                    <div key={index} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                        <input
-                          type="text"
-                          value={venue.name}
-                          onChange={(e) => updateHomeVenue(index, 'name', e.target.value)}
-                          className="input"
-                          placeholder="Platzname (z. B. Hauptplatz)"
-                        />
-                        <input
-                          type="text"
-                          value={venue.street}
-                          onChange={(e) => updateHomeVenue(index, 'street', e.target.value)}
-                          className="input"
-                          placeholder="Straße"
-                        />
-                        <input
-                          type="text"
-                          value={venue.zip_city}
-                          onChange={(e) => updateHomeVenue(index, 'zip_city', e.target.value)}
-                          className="input"
-                          placeholder="PLZ Ort"
-                        />
-                        <select
-                          value={venue.pitch_type}
-                          onChange={(e) => updateHomeVenue(index, 'pitch_type', e.target.value)}
-                          className="input"
-                          title="Platzart"
-                          aria-label="Platzart"
-                        >
-                          <option value="">Platzart</option>
-                          {pitchTypeOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                    <div key={index} className="rounded-xl border border-gray-200 dark:border-gray-700 p-3 sm:p-4 space-y-3 bg-gray-50/40 dark:bg-gray-800/40">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Platz {index + 1}</p>
+                        {venue.name.trim() && venue.name.trim() === defaultHomeVenueName.trim() && (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-200">
+                            Standard
+                          </span>
+                        )}
                       </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Platzname</label>
+                          <input
+                            type="text"
+                            value={venue.name}
+                            onChange={(e) => updateHomeVenue(index, 'name', e.target.value)}
+                            className="input"
+                            placeholder="z. B. Hauptplatz"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Platzart</label>
+                          <select
+                            value={venue.pitch_type}
+                            onChange={(e) => updateHomeVenue(index, 'pitch_type', e.target.value)}
+                            className="input"
+                            title="Platzart"
+                            aria-label="Platzart"
+                          >
+                            <option value="">Bitte wählen</option>
+                            {pitchTypeOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Straße</label>
+                          <input
+                            type="text"
+                            value={venue.street}
+                            onChange={(e) => updateHomeVenue(index, 'street', e.target.value)}
+                            className="input"
+                            placeholder="z. B. Musterstraße 12"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">PLZ / Ort</label>
+                          <input
+                            type="text"
+                            value={venue.zip_city}
+                            onChange={(e) => updateHomeVenue(index, 'zip_city', e.target.value)}
+                            className="input"
+                            placeholder="z. B. 12345 Musterstadt"
+                          />
+                        </div>
+                      </div>
+
                       <div className="flex justify-end">
                         <button
                           type="button"
                           onClick={() => removeHomeVenue(index)}
-                          className="btn btn-secondary"
+                          className="btn btn-secondary w-full sm:w-auto"
                         >
                           Entfernen
                         </button>
