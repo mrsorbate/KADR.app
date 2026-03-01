@@ -615,9 +615,20 @@ router.post('/:id/response', (req: AuthRequest, res) => {
   try {
     const eventId = parseInt(req.params.id);
     const { status, comment }: UpdateEventResponseDTO = req.body;
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    const allowedStatuses = new Set(['accepted', 'declined', 'tentative', 'pending']);
+    const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
 
-    if (!status) {
+    if (!normalizedStatus) {
       return res.status(400).json({ error: 'Status is required' });
+    }
+
+    if (!allowedStatuses.has(normalizedStatus)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    if (normalizedStatus === 'declined' && !normalizedComment) {
+      return res.status(400).json({ error: 'Bitte gib einen Grund für die Absage an' });
     }
 
     // Check if event exists and user is member
@@ -643,9 +654,16 @@ router.post('/:id/response', (req: AuthRequest, res) => {
       DO UPDATE SET status = ?, comment = ?, responded_at = CURRENT_TIMESTAMP
     `);
     
-    stmt.run(eventId, req.user!.id, status, comment, status, comment);
+    stmt.run(
+      eventId,
+      req.user!.id,
+      normalizedStatus,
+      normalizedComment || null,
+      normalizedStatus,
+      normalizedComment || null
+    );
 
-    res.json({ success: true, status, comment });
+    res.json({ success: true, status: normalizedStatus, comment: normalizedComment || null });
   } catch (error) {
     console.error('Update response error:', error);
     res.status(500).json({ error: 'Failed to update response' });
@@ -658,9 +676,20 @@ router.post('/:id/response/:userId', (req: AuthRequest, res) => {
     const eventId = parseInt(req.params.id);
     const userId = parseInt(req.params.userId);
     const { status, comment }: UpdateEventResponseDTO = req.body;
+    const normalizedStatus = String(status || '').trim().toLowerCase();
+    const allowedStatuses = new Set(['accepted', 'declined', 'tentative', 'pending']);
+    const normalizedComment = typeof comment === 'string' ? comment.trim() : '';
 
-    if (!status) {
+    if (!normalizedStatus) {
       return res.status(400).json({ error: 'Status is required' });
+    }
+
+    if (!allowedStatuses.has(normalizedStatus)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    if (normalizedStatus === 'declined' && !normalizedComment) {
+      return res.status(400).json({ error: 'Bitte gib einen Grund für die Absage an' });
     }
 
     // Check if event exists
@@ -696,9 +725,16 @@ router.post('/:id/response/:userId', (req: AuthRequest, res) => {
       DO UPDATE SET status = ?, comment = ?, responded_at = CURRENT_TIMESTAMP
     `);
     
-    stmt.run(eventId, userId, status, comment, status, comment);
+    stmt.run(
+      eventId,
+      userId,
+      normalizedStatus,
+      normalizedComment || null,
+      normalizedStatus,
+      normalizedComment || null
+    );
 
-    res.json({ success: true, status, comment, user_id: userId });
+    res.json({ success: true, status: normalizedStatus, comment: normalizedComment || null, user_id: userId });
   } catch (error) {
     console.error('Update response for user error:', error);
     res.status(500).json({ error: 'Failed to update response' });

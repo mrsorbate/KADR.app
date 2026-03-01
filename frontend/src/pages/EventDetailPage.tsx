@@ -17,6 +17,7 @@ export default function EventDetailPage() {
 
   const [selectedStatus, setSelectedStatus] = useState<'accepted' | 'declined' | 'tentative'>('accepted');
   const [comment, setComment] = useState('');
+  const [responseValidationMessage, setResponseValidationMessage] = useState('');
   const [expandedResponseUserId, setExpandedResponseUserId] = useState<number | null>(null);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -40,8 +41,8 @@ export default function EventDetailPage() {
 
   // Mutation for trainer to update player response
   const updatePlayerResponseMutation = useMutation({
-    mutationFn: (data: { userId: number; status: string }) =>
-      eventsAPI.updatePlayerResponse(eventId, data.userId, { status: data.status }),
+    mutationFn: (data: { userId: number; status: string; comment?: string }) =>
+      eventsAPI.updatePlayerResponse(eventId, data.userId, { status: data.status, comment: data.comment }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       setExpandedResponseUserId(null);
@@ -88,6 +89,12 @@ export default function EventDetailPage() {
   }, [myResponse?.status, myResponse?.comment]);
 
   const saveOwnResponse = (status: 'accepted' | 'declined' | 'tentative', nextComment: string) => {
+    if (status === 'declined' && !nextComment.trim()) {
+      setResponseValidationMessage('Bitte gib einen Grund für die Absage an.');
+      return;
+    }
+
+    setResponseValidationMessage('');
     updateResponseMutation.mutate({
       status,
       comment: nextComment.trim() ? nextComment : undefined,
@@ -95,9 +102,20 @@ export default function EventDetailPage() {
   };
   const handleTrainerStatusChangeFromModule = (userId: number, targetStatus: string) => {
     if (!isTrainer || updatePlayerResponseMutation.isPending) return;
+
+    let commentForUpdate: string | undefined;
+    if (targetStatus === 'declined') {
+      const declineReason = window.prompt('Bitte Grund für die Absage eingeben:')?.trim() || '';
+      if (!declineReason) {
+        return;
+      }
+      commentForUpdate = declineReason;
+    }
+
     updatePlayerResponseMutation.mutate({
       userId,
       status: targetStatus,
+      comment: commentForUpdate,
     });
   };
 
@@ -437,13 +455,22 @@ export default function EventDetailPage() {
                 </label>
                 <textarea
                   value={comment}
-                  onChange={(e) => setComment(e.target.value)}
+                  onChange={(e) => {
+                    setComment(e.target.value);
+                    if (responseValidationMessage && e.target.value.trim()) {
+                      setResponseValidationMessage('');
+                    }
+                  }}
                   onBlur={() => saveOwnResponse(selectedStatus, comment)}
                   className="input"
                   rows={2}
                   placeholder="z.B. Komme später..."
                 />
               </div>
+
+              {responseValidationMessage && (
+                <p className="text-sm text-red-600 dark:text-red-400">{responseValidationMessage}</p>
+              )}
 
               {updateResponseMutation.isPending && (
                 <p className="text-sm text-gray-600 dark:text-gray-300">Speichert...</p>
