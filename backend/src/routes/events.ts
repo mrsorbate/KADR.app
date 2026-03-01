@@ -551,6 +551,7 @@ router.post('/', (req: AuthRequest, res) => {
 router.put('/:id', (req: AuthRequest, res) => {
   try {
     const eventId = parseInt(req.params.id);
+    const updateSeries = req.query.update_series === 'true';
     const {
       title,
       type,
@@ -593,7 +594,7 @@ router.put('/:id', (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const event = db.prepare('SELECT id, team_id FROM events WHERE id = ?').get(eventId) as any;
+    const event = db.prepare('SELECT id, team_id, series_id, start_time, end_time FROM events WHERE id = ?').get(eventId) as any;
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
@@ -608,7 +609,47 @@ router.put('/:id', (req: AuthRequest, res) => {
 
     const resolvedLocation = location_venue || location || null;
 
-    db.prepare(
+    const teamMembers = db.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(event.team_id) as Array<{ user_id: number }>;
+    const teamMemberIds = teamMembers.map((member) => Number(member.user_id));
+    const normalizedInvitedUserIds = Array.isArray(invited_user_ids)
+      ? [...new Set(invited_user_ids.map((value) => Number(value)).filter((value) => Number.isFinite(value) && teamMemberIds.includes(value)))]
+      : [];
+
+    const resolvedInviteAll = !(invite_all === false || invite_all === 0);
+    const resolvedInvitedUserIds = resolvedInviteAll ? teamMemberIds : normalizedInvitedUserIds;
+
+    if (!resolvedInviteAll && resolvedInvitedUserIds.length === 0) {
+      return res.status(400).json({ error: 'Bitte mindestens einen Teilnehmer einladen' });
+    }
+
+    const sourceStartDate = new Date(event.start_time);
+    const targetStartDate = new Date(start_time);
+    const targetEndDate = new Date(end_time);
+
+    if (Number.isNaN(sourceStartDate.getTime()) || Number.isNaN(targetStartDate.getTime()) || Number.isNaN(targetEndDate.getTime())) {
+      return res.status(400).json({ error: 'Ungültige Datumswerte' });
+    }
+
+    const startShiftMs = targetStartDate.getTime() - sourceStartDate.getTime();
+    const targetDurationMs = targetEndDate.getTime() - targetStartDate.getTime();
+
+    if (!Number.isFinite(targetDurationMs) || targetDurationMs < 0) {
+      return res.status(400).json({ error: 'Ungültige Endzeit' });
+    }
+
+    const targetRsvpDate = rsvp_deadline ? new Date(rsvp_deadline) : null;
+    if (targetRsvpDate && Number.isNaN(targetRsvpDate.getTime())) {
+      return res.status(400).json({ error: 'Ungültige Rückmeldefrist' });
+    }
+    const targetRsvpOffsetMs = targetRsvpDate
+      ? targetStartDate.getTime() - targetRsvpDate.getTime()
+      : null;
+
+    const eventsToUpdate = updateSeries && event.series_id
+      ? db.prepare('SELECT id, start_time FROM events WHERE series_id = ?').all(event.series_id) as Array<{ id: number; start_time: string }>
+      : [{ id: eventId, start_time: event.start_time }];
+
+    const updateStmt = db.prepare(
       `UPDATE events
        SET title = ?,
            type = ?,
@@ -625,65 +666,69 @@ router.put('/:id', (req: AuthRequest, res) => {
            rsvp_deadline = ?,
            duration_minutes = ?,
            visibility_all = ?,
-             invite_all = ?,
+           invite_all = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`
-    ).run(
-      title,
-      type,
-      description || null,
-      resolvedLocation,
-      location_venue || null,
-      location_street || null,
-      location_zip_city || null,
-      pitch_type || null,
-      meeting_point || null,
-      arrival_minutes === null || arrival_minutes === undefined || Number.isNaN(arrival_minutes) ? null : arrival_minutes,
-      start_time,
-      end_time,
-      rsvp_deadline || null,
-      duration_minutes === null || duration_minutes === undefined || Number.isNaN(duration_minutes) ? null : duration_minutes,
-      visibility_all === false || visibility_all === 0 ? 0 : 1,
-      invite_all === false || invite_all === 0 ? 0 : 1,
-      eventId
     );
 
-    const teamMembers = db.prepare('SELECT user_id FROM team_members WHERE team_id = ?').all(event.team_id) as Array<{ user_id: number }>;
-    const teamMemberIds = teamMembers.map((member) => Number(member.user_id));
-    const normalizedInvitedUserIds = Array.isArray(invited_user_ids)
-      ? [...new Set(invited_user_ids.map((value) => Number(value)).filter((value) => Number.isFinite(value) && teamMemberIds.includes(value)))]
-      : [];
+    const teamSettings = db.prepare('SELECT default_response FROM teams WHERE id = ?').get(event.team_id) as { default_response?: string } | undefined;
+    const validStatuses = new Set(['pending', 'accepted', 'tentative', 'declined']);
+    const defaultResponseStatus = validStatuses.has(String(teamSettings?.default_response || 'pending'))
+      ? String(teamSettings?.default_response || 'pending')
+      : 'pending';
 
-    const resolvedInviteAll = !(invite_all === false || invite_all === 0);
-    const resolvedInvitedUserIds = resolvedInviteAll ? teamMemberIds : normalizedInvitedUserIds;
+    const syncInvitesForEvent = (targetEventId: number) => {
+      const existingResponses = db.prepare('SELECT user_id FROM event_responses WHERE event_id = ?').all(targetEventId) as Array<{ user_id: number }>;
+      const existingUserIdSet = new Set(existingResponses.map((row) => Number(row.user_id)));
+      const invitedUserIdSet = new Set(resolvedInvitedUserIds);
 
-    if (!resolvedInviteAll && resolvedInvitedUserIds.length === 0) {
-      return res.status(400).json({ error: 'Bitte mindestens einen Teilnehmer einladen' });
-    }
+      const usersToAdd = resolvedInvitedUserIds.filter((userId) => !existingUserIdSet.has(userId));
+      const usersToRemove = [...existingUserIdSet].filter((userId) => !invitedUserIdSet.has(userId));
 
-    const existingResponses = db.prepare('SELECT user_id FROM event_responses WHERE event_id = ?').all(eventId) as Array<{ user_id: number }>;
-    const existingUserIdSet = new Set(existingResponses.map((row) => Number(row.user_id)));
-    const invitedUserIdSet = new Set(resolvedInvitedUserIds);
-
-    const usersToAdd = resolvedInvitedUserIds.filter((userId) => !existingUserIdSet.has(userId));
-    const usersToRemove = [...existingUserIdSet].filter((userId) => !invitedUserIdSet.has(userId));
-
-    if (usersToRemove.length > 0) {
-      const placeholders = usersToRemove.map(() => '?').join(',');
-      db.prepare(`DELETE FROM event_responses WHERE event_id = ? AND user_id IN (${placeholders})`).run(eventId, ...usersToRemove);
-    }
-
-    if (usersToAdd.length > 0) {
-      const teamSettings = db.prepare('SELECT default_response FROM teams WHERE id = ?').get(event.team_id) as { default_response?: string } | undefined;
-      const validStatuses = new Set(['pending', 'accepted', 'tentative', 'declined']);
-      const defaultResponseStatus = validStatuses.has(String(teamSettings?.default_response || 'pending'))
-        ? String(teamSettings?.default_response || 'pending')
-        : 'pending';
-
-      const insertStmt = db.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
-      for (const userId of usersToAdd) {
-        insertStmt.run(eventId, userId, defaultResponseStatus);
+      if (usersToRemove.length > 0) {
+        const placeholders = usersToRemove.map(() => '?').join(',');
+        db.prepare(`DELETE FROM event_responses WHERE event_id = ? AND user_id IN (${placeholders})`).run(targetEventId, ...usersToRemove);
       }
+
+      if (usersToAdd.length > 0) {
+        const insertStmt = db.prepare('INSERT INTO event_responses (event_id, user_id, status) VALUES (?, ?, ?)');
+        for (const userId of usersToAdd) {
+          insertStmt.run(targetEventId, userId, defaultResponseStatus);
+        }
+      }
+    };
+
+    for (const targetEvent of eventsToUpdate) {
+      const currentStart = new Date(targetEvent.start_time);
+      const nextStartDate = Number.isNaN(currentStart.getTime())
+        ? targetStartDate
+        : new Date(currentStart.getTime() + startShiftMs);
+      const nextEndDate = new Date(nextStartDate.getTime() + targetDurationMs);
+      const nextRsvpDeadline = targetRsvpOffsetMs === null
+        ? null
+        : new Date(nextStartDate.getTime() - targetRsvpOffsetMs).toISOString();
+
+      updateStmt.run(
+        title,
+        type,
+        description || null,
+        resolvedLocation,
+        location_venue || null,
+        location_street || null,
+        location_zip_city || null,
+        pitch_type || null,
+        meeting_point || null,
+        arrival_minutes === null || arrival_minutes === undefined || Number.isNaN(arrival_minutes) ? null : arrival_minutes,
+        nextStartDate.toISOString(),
+        nextEndDate.toISOString(),
+        nextRsvpDeadline,
+        duration_minutes === null || duration_minutes === undefined || Number.isNaN(duration_minutes) ? null : duration_minutes,
+        visibility_all === false || visibility_all === 0 ? 0 : 1,
+        resolvedInviteAll ? 1 : 0,
+        targetEvent.id
+      );
+
+      syncInvitesForEvent(targetEvent.id);
     }
 
     return res.json({ success: true });

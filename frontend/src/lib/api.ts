@@ -159,7 +159,8 @@ export const eventsAPI = {
     visibility_all?: boolean;
     invite_all?: boolean;
     invited_user_ids?: number[];
-  }) => api.put(`/events/${id}`, data),
+  }, updateSeries: boolean = false) =>
+    api.put(`/events/${id}${updateSeries ? '?update_series=true' : ''}`, data),
   
   updateResponse: (id: number, data: { status: string; comment?: string }) =>
     api.post(`/events/${id}/response`, data),

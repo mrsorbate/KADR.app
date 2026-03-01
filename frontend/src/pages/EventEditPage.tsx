@@ -34,6 +34,7 @@ export default function EventEditPage() {
     invited_user_ids: [] as number[],
   });
   const [inviteSelectionModalOpen, setInviteSelectionModalOpen] = useState(false);
+  const [seriesSaveModalOpen, setSeriesSaveModalOpen] = useState(false);
 
   const durationConfig = { min: 5, step: 5 } as const;
   const arrivalConfig = { min: 0, max: 240, step: 5 } as const;
@@ -382,7 +383,8 @@ export default function EventEditPage() {
   ]);
 
   const updateEventMutation = useMutation({
-    mutationFn: (data: any) => eventsAPI.update(eventId, data),
+    mutationFn: ({ data, updateSeries }: { data: any; updateSeries: boolean }) =>
+      eventsAPI.update(eventId, data, updateSeries),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -390,9 +392,7 @@ export default function EventEditPage() {
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const submitUpdate = (updateSeries: boolean) => {
     const dataToSend = {
       title: eventData.title,
       type: eventData.type,
@@ -413,7 +413,16 @@ export default function EventEditPage() {
       invited_user_ids: eventData.invited_user_ids,
     };
 
-    updateEventMutation.mutate(dataToSend);
+    updateEventMutation.mutate({ data: dataToSend, updateSeries });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (event?.series_id) {
+      setSeriesSaveModalOpen(true);
+      return;
+    }
+    submitUpdate(false);
   };
 
   const openInviteSelectionModal = () => {
@@ -899,6 +908,50 @@ export default function EventEditPage() {
                 disabled={eventData.invited_user_ids.length === 0}
               >
                 Übernehmen
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {seriesSaveModalOpen && event?.series_id ? (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card max-w-md w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Terminserie bearbeiten</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 mb-4">
+              Dieser Termin gehört zu einer Serie. Was möchtest du speichern?
+            </p>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSeriesSaveModalOpen(false);
+                  submitUpdate(false);
+                }}
+                disabled={updateEventMutation.isPending}
+                className="w-full btn btn-secondary"
+              >
+                Nur diesen Termin speichern
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSeriesSaveModalOpen(false);
+                  submitUpdate(true);
+                }}
+                disabled={updateEventMutation.isPending}
+                className="w-full btn btn-primary"
+              >
+                Ganze Serie speichern
+              </button>
+              <button
+                type="button"
+                onClick={() => setSeriesSaveModalOpen(false)}
+                disabled={updateEventMutation.isPending}
+                className="w-full btn btn-secondary"
+              >
+                Abbrechen
               </button>
             </div>
           </div>
