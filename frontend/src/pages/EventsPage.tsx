@@ -59,29 +59,27 @@ export default function EventsPage() {
 
   const eventItems = Array.isArray(events) ? events : [];
 
-  const pastEventGroups = isPastView
-    ? eventItems.reduce<Array<{ key: string; label: string; items: any[] }>>((groups, event) => {
-        const startDate = new Date(event.start_time);
-        if (Number.isNaN(startDate.getTime())) {
-          return groups;
-        }
+  const eventGroups = eventItems.reduce<Array<{ key: string; label: string; items: any[] }>>((groups, event) => {
+    const startDate = new Date(event.start_time);
+    if (Number.isNaN(startDate.getTime())) {
+      return groups;
+    }
 
-        const groupKey = `${startDate.getFullYear()}-${startDate.getMonth()}`;
-        const existingGroup = groups.find((group) => group.key === groupKey);
-        if (existingGroup) {
-          existingGroup.items.push(event);
-          return groups;
-        }
+    const groupKey = `${startDate.getFullYear()}-${startDate.getMonth()}`;
+    const existingGroup = groups.find((group) => group.key === groupKey);
+    if (existingGroup) {
+      existingGroup.items.push(event);
+      return groups;
+    }
 
-        groups.push({
-          key: groupKey,
-          label: startDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
-          items: [event],
-        });
+    groups.push({
+      key: groupKey,
+      label: startDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }),
+      items: [event],
+    });
 
-        return groups;
-      }, [])
-    : [];
+    return groups;
+  }, []);
 
   const renderEventCard = (event: any) => {
     const getActionButtonClass = (status: string) => {
@@ -414,18 +412,16 @@ export default function EventsPage() {
 
       {/* Events List */}
       <div className="space-y-3 sm:space-y-4">
-        {isPastView
-          ? pastEventGroups.map((group) => (
-              <div key={group.key} className="space-y-2">
-                <h2 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 capitalize px-1">
-                  {group.label}
-                </h2>
-                <div className="space-y-3 sm:space-y-4">
-                  {group.items.map(renderEventCard)}
-                </div>
-              </div>
-            ))
-          : eventItems.map(renderEventCard)}
+        {eventGroups.map((group) => (
+          <div key={group.key} className="space-y-2">
+            <h2 className="text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 capitalize px-1">
+              {group.label}
+            </h2>
+            <div className="space-y-3 sm:space-y-4">
+              {group.items.map(renderEventCard)}
+            </div>
+          </div>
+        ))}
         {eventItems.length === 0 && (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             <Calendar className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
