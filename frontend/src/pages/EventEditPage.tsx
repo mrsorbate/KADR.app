@@ -193,6 +193,16 @@ export default function EventEditPage() {
           return String(Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000)));
         })();
 
+    const invitedUserIds: number[] = [];
+    if (Array.isArray(event.responses)) {
+      for (const response of event.responses as any[]) {
+        const userId = Number(response?.user_id);
+        if (Number.isFinite(userId) && !invitedUserIds.includes(userId)) {
+          invitedUserIds.push(userId);
+        }
+      }
+    }
+
     setEventData({
       title: event.title || '',
       type: (event.type || 'training') as 'training' | 'match' | 'other',
@@ -209,9 +219,7 @@ export default function EventEditPage() {
       rsvp_deadline: toLocalInputValue(event.rsvp_deadline),
       visibility_all: event.visibility_all === 1 || event.visibility_all === true,
       invite_all: event.invite_all === 1 || event.invite_all === true,
-      invited_user_ids: Array.isArray(event.responses)
-        ? [...new Set(event.responses.map((response: any) => response.user_id).filter((value: any) => Number.isFinite(value)))]
-        : [],
+      invited_user_ids: invitedUserIds,
     });
   }, [event]);
 

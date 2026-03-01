@@ -209,8 +209,6 @@ export default function EventCreatePage() {
 
   const effectiveTeamId = selectedTeamId;
 
-  const allMemberIds = membersForCreate?.map((member: any) => member.id) || [];
-
   const { data: membersForCreate } = useQuery({
     queryKey: ['team-members', effectiveTeamId],
     queryFn: async () => {
@@ -219,6 +217,8 @@ export default function EventCreatePage() {
     },
     enabled: isTrainer && !!effectiveTeamId,
   });
+
+  const allMemberIds = membersForCreate?.map((member: any) => member.id) || [];
 
   const { data: teamSettings } = useQuery({
     queryKey: ['team-settings', effectiveTeamId],
