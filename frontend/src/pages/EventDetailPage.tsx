@@ -314,6 +314,43 @@ export default function EventDetailPage() {
   const isMatchWithoutAddress = event?.type === 'match' && locationParts.length === 0;
   const hasMeetingInfo = (event?.meeting_point && String(event.meeting_point).trim().length > 0)
     || (event?.arrival_minutes !== null && event?.arrival_minutes !== undefined);
+  const hasSettingsModule = Boolean(event?.rsvp_deadline) || event?.visibility_all !== undefined || event?.invite_all !== undefined;
+
+  const repeatType = String((event as any)?.repeat_type || 'none');
+  const repeatUntil = (event as any)?.repeat_until;
+  const repeatDaysRaw = (event as any)?.repeat_days;
+  const repeatDays = (() => {
+    if (Array.isArray(repeatDaysRaw)) {
+      return repeatDaysRaw.map((value) => Number(value)).filter((value) => Number.isInteger(value));
+    }
+    if (typeof repeatDaysRaw === 'string' && repeatDaysRaw.trim()) {
+      try {
+        const parsed = JSON.parse(repeatDaysRaw);
+        if (Array.isArray(parsed)) {
+          return parsed.map((value) => Number(value)).filter((value) => Number.isInteger(value));
+        }
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  })();
+  const weekdayLabelMap: Record<number, string> = {
+    0: 'So',
+    1: 'Mo',
+    2: 'Di',
+    3: 'Mi',
+    4: 'Do',
+    5: 'Fr',
+    6: 'Sa',
+  };
+  const repeatDaysLabel = repeatDays
+    .filter((day, index, arr) => arr.indexOf(day) === index)
+    .sort((a, b) => a - b)
+    .map((day) => weekdayLabelMap[day])
+    .filter(Boolean)
+    .join(', ');
+  const hasSeriesModule = repeatType !== 'none';
 
   const renderResponseModule = (
     title: string,
@@ -512,15 +549,6 @@ export default function EventDetailPage() {
                 </div>
               )}
 
-              {event?.rsvp_deadline && (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
-                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Rückmeldefrist</p>
-                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">
-                    {safeFormatDate(event.rsvp_deadline, 'PPPp')}
-                  </p>
-                </div>
-              )}
-
               {event?.description && (
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
                   <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Beschreibung</p>
@@ -529,6 +557,66 @@ export default function EventDetailPage() {
               )}
             </div>
           </div>
+
+          {hasSettingsModule && (
+            <div className="card">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Einstellungen</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {event?.rsvp_deadline && (
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Rückmeldefrist</p>
+                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">{safeFormatDate(event.rsvp_deadline, 'PPPp')}</p>
+                  </div>
+                )}
+
+                {event?.invite_all !== undefined && (
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Einladungen</p>
+                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">
+                      {event.invite_all === 1 || event.invite_all === true ? 'Alle Teammitglieder' : 'Individuell ausgewählt'}
+                    </p>
+                  </div>
+                )}
+
+                {event?.visibility_all !== undefined && (
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Teilnehmerliste</p>
+                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">
+                      {event.visibility_all === 1 || event.visibility_all === true ? 'Für alle sichtbar' : 'Nur für Trainer sichtbar'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {hasSeriesModule && (
+            <div className="card">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 text-gray-900 dark:text-white">Serientermin</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Wiederholung</p>
+                  <p className="mt-1 font-semibold text-gray-900 dark:text-white">
+                    {repeatType === 'weekly' ? 'Wöchentlich' : repeatType === 'custom' ? 'Bestimmte Wochentage' : repeatType}
+                  </p>
+                </div>
+
+                {repeatUntil && (
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Endet am</p>
+                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">{safeFormatDate(repeatUntil, 'PPP')}</p>
+                  </div>
+                )}
+
+                {repeatDaysLabel && (
+                  <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 sm:col-span-2">
+                    <p className="text-[11px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Wochentage</p>
+                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">{repeatDaysLabel}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Your Response */}
           <div className="card">
